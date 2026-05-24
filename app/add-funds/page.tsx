@@ -69,14 +69,14 @@ export default function AddFundsPage() {
 
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
 
           <div>
 
-            <h1 className="text-3xl md:text-5xl font-bold">
+            <h1 className="text-2xl md:text-3xl md:text-2xl md:text-3xl md:text-5xl font-bold">
               Add Funds
             </h1>
 
@@ -90,7 +90,7 @@ export default function AddFundsPage() {
 
             <button
               title="Back Dashboard"
-              className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
+              className="bg-blue-600 hover:bg-blue-700 px-4 md:px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
             >
               Back Dashboard
             </button>
@@ -106,7 +106,7 @@ export default function AddFundsPage() {
             Current Wallet Balance
           </p>
 
-          <h2 className="text-4xl md:text-6xl font-bold mt-4">
+          <h2 className="text-2xl md:text-4xl md:text-6xl font-bold mt-4">
             ₦{Number(balance).toLocaleString()}
           </h2>
 
@@ -119,7 +119,7 @@ export default function AddFundsPage() {
         {/* PAYMENT FORM */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-[32px] p-6 md:p-10 shadow-2xl">
 
-          <h2 className="text-3xl font-bold mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold mb-8">
             Fund Wallet
           </h2>
 
@@ -154,7 +154,7 @@ export default function AddFundsPage() {
                 onClick={() =>
                   setAmount(value.toString())
                 }
-                className="bg-[var(--input)] hover:bg-blue-600 hover:text-white border border-[var(--border)] py-4 rounded-2xl font-semibold transition"
+                className="bg-[var(--input)] hover:bg-blue-600 hover:text-white border border-[var(--border)] py-3 md:py-4 rounded-2xl font-semibold transition"
               >
                 ₦{value.toLocaleString()}
               </button>
@@ -173,9 +173,9 @@ export default function AddFundsPage() {
             <div className="grid md:grid-cols-3 gap-6">
 
               {/* PAYSTACK */}
-              <div className="bg-[var(--input)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+              <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-105 transition shadow-xl cursor-pointer">
 
-                <div className="text-5xl mb-5">
+                <div className="text-2xl md:text-3xl md:text-5xl mb-5">
                   💳
                 </div>
 
@@ -190,9 +190,9 @@ export default function AddFundsPage() {
               </div>
 
               {/* BANK */}
-              <div className="bg-[var(--input)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+              <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-105 transition shadow-xl cursor-pointer">
 
-                <div className="text-5xl mb-5">
+                <div className="text-2xl md:text-3xl md:text-5xl mb-5">
                   🏦
                 </div>
 
@@ -207,9 +207,9 @@ export default function AddFundsPage() {
               </div>
 
               {/* CRYPTO */}
-              <div className="bg-[var(--input)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+              <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-105 transition shadow-xl cursor-pointer">
 
-                <div className="text-5xl mb-5">
+                <div className="text-2xl md:text-3xl md:text-5xl mb-5">
                   ₿
                 </div>
 
@@ -241,9 +241,9 @@ export default function AddFundsPage() {
         {/* INFO CARDS */}
         <div className="grid md:grid-cols-3 gap-6 mt-10">
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-5xl mb-5">
+            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
               ⚡
             </div>
 
@@ -257,9 +257,9 @@ export default function AddFundsPage() {
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-5xl mb-5">
+            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
               🔒
             </div>
 
@@ -273,9 +273,9 @@ export default function AddFundsPage() {
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-5xl mb-5">
+            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
               🌍
             </div>
 

@@ -1,6 +1,6 @@
 export default function Footer() {
   return (
-    <footer className="border-t border-[var(--border)] py-10 px-8 mt-20">
+    <footer className="border-t border-[var(--border)] py-6 md:py-10 px-5 md:px-8 mt-20">
 
       <div className="grid md:grid-cols-3 gap-10">
 

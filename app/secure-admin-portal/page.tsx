@@ -94,7 +94,7 @@ export default function AdminPage() {
 
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
 
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-2xl md:text-3xl font-bold">
             Loading Admin Panel...
           </h1>
 
@@ -117,14 +117,14 @@ export default function AdminPage() {
 
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
         {/* TOP HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
 
           <div>
 
-            <h1 className="text-5xl font-bold">
+            <h1 className="text-2xl md:text-3xl md:text-5xl font-bold">
               Admin Dashboard
             </h1>
 
@@ -140,7 +140,7 @@ export default function AdminPage() {
 
               <button
                 title="Back Dashboard"
-                className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
+                className="bg-blue-600 hover:bg-blue-700 px-4 md:px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
               >
                 User Dashboard
               </button>
@@ -155,7 +155,7 @@ export default function AdminPage() {
 
                 router.push("/login");
               }}
-              className="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
+              className="bg-red-600 hover:bg-red-700 px-4 md:px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
             >
               Logout
             </button>
@@ -165,9 +165,9 @@ export default function AdminPage() {
         </div>
 
         {/* ADMIN INFO */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-2xl mb-10">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-2xl mb-10">
 
-          <h2 className="text-3xl font-bold mb-4">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">
             Admin Access
           </h2>
 
@@ -184,49 +184,49 @@ export default function AdminPage() {
         {/* STATS */}
         <div className="grid md:grid-cols-4 gap-6 mb-10">
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
             <p className="text-gray-400">
               Total Users
             </p>
 
-            <h2 className="text-5xl font-bold mt-4">
+            <h2 className="text-2xl md:text-3xl md:text-5xl font-bold mt-4">
               {users.length}
             </h2>
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
             <p className="text-gray-400">
               Wallet Users
             </p>
 
-            <h2 className="text-5xl font-bold mt-4 text-green-500">
+            <h2 className="text-2xl md:text-3xl md:text-5xl font-bold mt-4 text-green-500">
               {users.length}
             </h2>
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
             <p className="text-gray-400">
               Platform Status
             </p>
 
-            <h2 className="text-5xl font-bold mt-4 text-blue-500">
+            <h2 className="text-2xl md:text-3xl md:text-5xl font-bold mt-4 text-blue-500">
               LIVE
             </h2>
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
             <p className="text-gray-400">
               OTP Orders
             </p>
 
-            <h2 className="text-5xl font-bold mt-4 text-yellow-500">
+            <h2 className="text-2xl md:text-3xl md:text-5xl font-bold mt-4 text-yellow-500">
               0
             </h2>
 
@@ -235,11 +235,11 @@ export default function AdminPage() {
         </div>
 
         {/* USERS SECTION */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-2xl">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-2xl">
 
           <div className="flex items-center justify-between mb-8">
 
-            <h2 className="text-3xl font-bold">
+            <h2 className="text-2xl md:text-3xl font-bold">
               Registered Users
             </h2>
 
@@ -271,7 +271,7 @@ export default function AdminPage() {
 
               <div
                 key={user.id}
-                className="bg-[var(--input)] border border-[var(--border)] rounded-3xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6"
+                className="bg-[var(--input)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6"
               >
 
                 <div>

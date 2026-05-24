@@ -61,14 +61,14 @@ export default function SmsHistoryPage() {
 
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
 
           <div>
 
-            <h1 className="text-5xl font-bold">
+            <h1 className="text-2xl md:text-3xl md:text-5xl font-bold">
               SMS History
             </h1>
 
@@ -82,7 +82,7 @@ export default function SmsHistoryPage() {
 
             <button
               title="Back Dashboard"
-              className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
+              className="bg-blue-600 hover:bg-blue-700 px-4 md:px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
             >
               Back Dashboard
             </button>
@@ -94,37 +94,37 @@ export default function SmsHistoryPage() {
         {/* STATS */}
         <div className="grid md:grid-cols-3 gap-6 mb-10">
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
             <p className="text-gray-400">
               Total Orders
             </p>
 
-            <h2 className="text-5xl font-bold mt-4">
+            <h2 className="text-2xl md:text-3xl md:text-5xl font-bold mt-4">
               120
             </h2>
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
             <p className="text-gray-400">
               Completed
             </p>
 
-            <h2 className="text-5xl font-bold mt-4 text-green-500">
+            <h2 className="text-2xl md:text-3xl md:text-5xl font-bold mt-4 text-green-500">
               98
             </h2>
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
             <p className="text-gray-400">
               Pending
             </p>
 
-            <h2 className="text-5xl font-bold mt-4 text-yellow-500">
+            <h2 className="text-2xl md:text-3xl md:text-5xl font-bold mt-4 text-yellow-500">
               12
             </h2>
 
@@ -233,9 +233,9 @@ export default function SmsHistoryPage() {
         {/* EXTRA CARDS */}
         <div className="grid md:grid-cols-3 gap-6 mt-10">
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-5xl mb-5">
+            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
               ⚡
             </div>
 
@@ -249,9 +249,9 @@ export default function SmsHistoryPage() {
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-5xl mb-5">
+            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
               🔒
             </div>
 
@@ -265,9 +265,9 @@ export default function SmsHistoryPage() {
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-5xl mb-5">
+            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
               🌍
             </div>
 

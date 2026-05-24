@@ -68,7 +68,7 @@ export default function LoginPage() {
 
   return (
 
-    <main className="auth-background min-h-screen relative flex items-center justify-center px-6 py-10">
+    <main className="auth-background min-h-screen relative flex items-center justify-center px-4 md:px-6 py-6 md:py-10">
 
       {/* DARK OVERLAY */}
       <div className="absolute inset-0 bg-black/75" />
@@ -76,12 +76,12 @@ export default function LoginPage() {
       {/* LOGIN CARD */}
       <div className="relative z-10 w-full max-w-lg">
 
-        <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl p-10 shadow-2xl">
+        <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl md:rounded-3xl p-10 shadow-2xl">
 
           {/* HEADER */}
           <div className="text-center mb-10">
 
-            <h1 className="text-4xl font-bold text-white">
+            <h1 className="text-2xl md:text-4xl font-bold text-white">
               Welcome Back
             </h1>
 
@@ -112,7 +112,7 @@ export default function LoginPage() {
                 onChange={(e) =>
                   setEmail(e.target.value)
                 }
-                className="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition"
+                className="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition"
                 required
               />
 
@@ -139,7 +139,7 @@ export default function LoginPage() {
                   onChange={(e) =>
                     setPassword(e.target.value)
                   }
-                  className="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition"
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition"
                   required
                 />
 
@@ -167,7 +167,7 @@ export default function LoginPage() {
               title="Login"
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-2xl font-bold text-white transition shadow-xl"
+              className="w-full bg-blue-600 hover:bg-blue-700 py-3 md:py-4 rounded-2xl font-bold text-white transition shadow-xl"
             >
 
               {loading

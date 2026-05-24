@@ -110,7 +110,7 @@ export default function SettingsPage() {
 
   return (
 
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] px-6 py-10 transition-all duration-300">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] px-4 md:px-6 py-6 md:py-10 transition-all duration-300">
 
       <div className="max-w-5xl mx-auto">
 
@@ -119,7 +119,7 @@ export default function SettingsPage() {
 
           <div>
 
-            <h1 className="text-3xl md:text-5xl font-bold">
+            <h1 className="text-2xl md:text-3xl md:text-2xl md:text-3xl md:text-5xl font-bold">
               Settings
             </h1>
 
@@ -133,7 +133,7 @@ export default function SettingsPage() {
 
             <button
               title="Back Dashboard"
-              className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl font-semibold transition shadow-lg"
+              className="bg-blue-600 hover:bg-blue-700 px-4 md:px-6 py-3 rounded-2xl font-semibold transition shadow-lg"
             >
               Back Dashboard
             </button>
@@ -156,12 +156,12 @@ export default function SettingsPage() {
         <div className="space-y-8">
 
           {/* PROFILE */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-5 md:p-8 shadow-xl">
 
             <div className="flex flex-col md:flex-row md:items-center gap-6 mb-10">
 
               {/* AVATAR */}
-              <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-4xl font-bold text-white shadow-xl">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-2xl md:text-4xl font-bold text-white shadow-xl">
 
                 {username.charAt(0).toUpperCase()}
 
@@ -169,7 +169,7 @@ export default function SettingsPage() {
 
               <div>
 
-                <h2 className="text-3xl font-bold">
+                <h2 className="text-2xl md:text-3xl font-bold">
                   {username}
                 </h2>
 
@@ -200,7 +200,7 @@ export default function SettingsPage() {
                   placeholder="Enter full name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition"
+                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500 transition"
                 />
 
               </div>
@@ -218,7 +218,7 @@ export default function SettingsPage() {
                   placeholder="Enter username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition"
+                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500 transition"
                 />
 
               </div>
@@ -235,7 +235,7 @@ export default function SettingsPage() {
                   type="email"
                   value={email}
                   readOnly
-                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 opacity-70"
+                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 opacity-70"
                 />
 
               </div>
@@ -245,7 +245,7 @@ export default function SettingsPage() {
           </div>
 
           {/* NOTIFICATIONS */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-5 md:p-8 shadow-xl">
 
             <h2 className="text-2xl font-bold mb-8">
               Notifications
@@ -336,7 +336,7 @@ export default function SettingsPage() {
           </div>
 
           {/* APPEARANCE */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-5 md:p-8 shadow-xl">
 
             <h2 className="text-2xl font-bold mb-8">
               Appearance
@@ -381,7 +381,7 @@ export default function SettingsPage() {
           </div>
 
           {/* SECURITY */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-5 md:p-8 shadow-xl">
 
             <h2 className="text-2xl font-bold mb-8">
               Security
@@ -417,7 +417,7 @@ export default function SettingsPage() {
 
                 <button
                   title="Change Password"
-                  className="w-full bg-yellow-600 hover:bg-yellow-700 py-4 rounded-2xl font-semibold transition"
+                  className="w-full bg-yellow-600 hover:bg-yellow-700 py-3 md:py-4 rounded-2xl font-semibold transition"
                 >
                   Change Password
                 </button>
@@ -427,7 +427,7 @@ export default function SettingsPage() {
               <button
                 title="Logout"
                 onClick={handleLogout}
-                className="w-full bg-red-600 hover:bg-red-700 py-4 rounded-2xl font-semibold transition"
+                className="w-full bg-red-600 hover:bg-red-700 py-3 md:py-4 rounded-2xl font-semibold transition"
               >
                 Logout
               </button>
@@ -446,9 +446,9 @@ export default function SettingsPage() {
           </button>
 
           {/* DANGER ZONE */}
-          <div className="bg-red-950 border border-red-700 rounded-3xl p-5 md:p-8 shadow-xl">
+          <div className="bg-red-950 border border-red-700 rounded-2xl md:rounded-3xl p-5 md:p-5 md:p-8 shadow-xl">
 
-            <h2 className="text-3xl font-bold text-red-400 mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-red-400 mb-4">
               Danger Zone
             </h2>
 
@@ -461,7 +461,7 @@ export default function SettingsPage() {
             <button
               title="Delete Account"
               onClick={handleDeleteAccount}
-              className="bg-red-600 hover:bg-red-700 px-8 py-4 rounded-2xl font-semibold transition"
+              className="bg-red-600 hover:bg-red-700 px-5 md:px-8 py-3 md:py-4 rounded-2xl font-semibold transition"
             >
               Delete Account
             </button>

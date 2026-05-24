@@ -60,14 +60,14 @@ export default function DashboardPage() {
 
   return (
 
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all duration-300 pb-28 md:pb-0">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all duration-300 pb-28 md:pb-0 overflow-x-hidden">
 
       {/* BACKGROUND EFFECTS */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
 
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/20 blur-[120px] rounded-full" />
+        <div className="absolute top-0 left-0 w-72 md:w-96 h-72 md:h-96 bg-blue-500/20 blur-[120px] rounded-full" />
 
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 right-0 w-72 md:w-96 h-72 md:h-96 bg-purple-500/20 blur-[120px] rounded-full" />
 
       </div>
 
@@ -142,37 +142,37 @@ export default function DashboardPage() {
         </aside>
 
         {/* MAIN CONTENT */}
-        <div className="flex-1 p-4 md:p-10">
+        <div className="flex-1 p-4 sm:p-5 md:p-10 max-w-full overflow-hidden">
 
           {/* TOPBAR */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 mb-8 md:mb-10">
 
-            <div className="max-w-full overflow-hidden">
+            <div className="min-w-0">
 
-              <h1 className="text-3xl md:text-5xl font-bold break-words">
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold break-words">
                 Dashboard
               </h1>
 
-              <p className="text-gray-400 mt-3 text-base md:text-lg break-words">
+              <p className="text-gray-400 mt-2 md:mt-3 text-sm sm:text-base md:text-lg break-words">
                 Welcome back, {username}
               </p>
 
             </div>
 
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
 
               <Link href="/add-funds">
 
                 <button
                   title="Add Funds"
-                  className="bg-blue-600 hover:bg-blue-700 px-5 md:px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
+                  className="bg-blue-600 hover:bg-blue-700 px-4 sm:px-5 md:px-6 py-3 rounded-2xl font-semibold transition shadow-xl text-sm sm:text-base"
                 >
                   Add Funds
                 </button>
 
               </Link>
 
-              <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white text-lg md:text-xl font-bold shadow-xl">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white text-base sm:text-lg md:text-xl font-bold shadow-xl shrink-0">
 
                 {username.charAt(0).toUpperCase()}
 
@@ -183,23 +183,23 @@ export default function DashboardPage() {
           </div>
 
           {/* WALLET CARD */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-[32px] p-6 md:p-10 shadow-2xl mb-10 text-white overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-[28px] md:rounded-[32px] p-5 sm:p-6 md:p-10 shadow-2xl mb-8 md:mb-10 text-white overflow-hidden">
 
-            <p className="text-lg opacity-80">
+            <p className="text-base md:text-lg opacity-80">
               Available Balance
             </p>
 
-            <h2 className="text-4xl md:text-6xl font-bold mt-4 break-words">
+            <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold mt-4 break-words leading-tight">
               ₦{Number(balance).toLocaleString()}
             </h2>
 
-            <div className="flex flex-wrap gap-4 mt-8">
+            <div className="flex flex-wrap gap-3 md:gap-4 mt-6 md:mt-8">
 
               <Link href="/add-funds">
 
                 <button
                   title="Fund Wallet"
-                  className="bg-white text-black hover:bg-gray-200 px-6 py-3 rounded-2xl font-semibold transition"
+                  className="bg-white text-black hover:bg-gray-200 px-4 md:px-6 py-3 rounded-2xl font-semibold transition text-sm sm:text-base"
                 >
                   Fund Wallet
                 </button>
@@ -210,7 +210,7 @@ export default function DashboardPage() {
 
                 <button
                   title="Buy Number"
-                  className="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-2xl font-semibold transition backdrop-blur-xl"
+                  className="bg-white/20 hover:bg-white/30 px-4 md:px-6 py-3 rounded-2xl font-semibold transition backdrop-blur-xl text-sm sm:text-base"
                 >
                   Buy Number
                 </button>
@@ -222,51 +222,51 @@ export default function DashboardPage() {
           </div>
 
           {/* STATS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-10">
 
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-4 sm:p-5 md:p-8 shadow-xl">
 
-              <p className="text-gray-400">
+              <p className="text-gray-400 text-sm sm:text-base">
                 Orders
               </p>
 
-              <h3 className="text-4xl font-bold mt-4">
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-3 md:mt-4">
                 120
               </h3>
 
             </div>
 
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-4 sm:p-5 md:p-8 shadow-xl">
 
-              <p className="text-gray-400">
+              <p className="text-gray-400 text-sm sm:text-base">
                 Completed
               </p>
 
-              <h3 className="text-4xl font-bold mt-4 text-green-500">
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-3 md:mt-4 text-green-500">
                 98
               </h3>
 
             </div>
 
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-4 sm:p-5 md:p-8 shadow-xl">
 
-              <p className="text-gray-400">
+              <p className="text-gray-400 text-sm sm:text-base">
                 Pending
               </p>
 
-              <h3 className="text-4xl font-bold mt-4 text-yellow-500">
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-3 md:mt-4 text-yellow-500">
                 12
               </h3>
 
             </div>
 
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-4 sm:p-5 md:p-8 shadow-xl">
 
-              <p className="text-gray-400">
+              <p className="text-gray-400 text-sm sm:text-base">
                 Countries
               </p>
 
-              <h3 className="text-4xl font-bold mt-4 text-blue-500">
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-3 md:mt-4 text-blue-500">
                 90+
               </h3>
 
@@ -275,27 +275,27 @@ export default function DashboardPage() {
           </div>
 
           {/* QUICK ACTIONS */}
-          <div className="mb-10">
+          <div className="mb-8 md:mb-10">
 
-            <h2 className="text-3xl font-bold mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold mb-5 md:mb-6">
               Quick Actions
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
 
               <Link href="/buy-number">
 
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer">
 
-                  <div className="text-5xl mb-5">
+                  <div className="text-4xl md:text-5xl mb-4 md:mb-5">
                     📱
                   </div>
 
-                  <h3 className="text-2xl font-bold">
+                  <h3 className="text-xl md:text-2xl font-bold">
                     Buy Number
                   </h3>
 
-                  <p className="text-gray-400 mt-3">
+                  <p className="text-gray-400 mt-3 text-sm md:text-base leading-7">
                     Purchase virtual numbers instantly
                   </p>
 
@@ -305,17 +305,17 @@ export default function DashboardPage() {
 
               <Link href="/wallet">
 
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer">
 
-                  <div className="text-5xl mb-5">
+                  <div className="text-4xl md:text-5xl mb-4 md:mb-5">
                     💳
                   </div>
 
-                  <h3 className="text-2xl font-bold">
+                  <h3 className="text-xl md:text-2xl font-bold">
                     Wallet
                   </h3>
 
-                  <p className="text-gray-400 mt-3">
+                  <p className="text-gray-400 mt-3 text-sm md:text-base leading-7">
                     Manage your funds and payments
                   </p>
 
@@ -325,17 +325,17 @@ export default function DashboardPage() {
 
               <Link href="/sms-history">
 
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer">
 
-                  <div className="text-5xl mb-5">
+                  <div className="text-4xl md:text-5xl mb-4 md:mb-5">
                     📩
                   </div>
 
-                  <h3 className="text-2xl font-bold">
+                  <h3 className="text-xl md:text-2xl font-bold">
                     SMS History
                   </h3>
 
-                  <p className="text-gray-400 mt-3">
+                  <p className="text-gray-400 mt-3 text-sm md:text-base leading-7">
                     View all your OTP orders
                   </p>
 
@@ -348,9 +348,9 @@ export default function DashboardPage() {
           </div>
 
           {/* RECENT ACTIVITY */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+            <div className="flex items-center justify-between mb-6 md:mb-8 flex-wrap gap-4">
 
               <h2 className="text-2xl md:text-3xl font-bold">
                 Recent Activity
@@ -358,7 +358,7 @@ export default function DashboardPage() {
 
               <Link
                 href="/sms-history"
-                className="text-blue-500 hover:text-blue-400"
+                className="text-blue-500 hover:text-blue-400 text-sm md:text-base"
               >
                 View All
               </Link>
@@ -369,19 +369,19 @@ export default function DashboardPage() {
 
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[var(--input)] rounded-2xl p-5">
 
-                <div>
+                <div className="min-w-0">
 
                   <h3 className="font-semibold">
                     No Activity Yet
                   </h3>
 
-                  <p className="text-gray-400 text-sm mt-1 break-words">
+                  <p className="text-gray-400 text-sm mt-1 break-words leading-6">
                     Your recent orders and wallet activities will appear here
                   </p>
 
                 </div>
 
-                <span className="bg-blue-500/20 text-blue-500 px-4 py-2 rounded-xl text-sm w-fit">
+                <span className="bg-blue-500/20 text-blue-500 px-4 py-2 rounded-xl text-sm w-fit shrink-0">
                   Empty
                 </span>
 

@@ -47,14 +47,14 @@ useEffect(() => {
 
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
 
           <div>
 
-            <h1 className="text-5xl font-bold">
+            <h1 className="text-2xl md:text-3xl md:text-5xl font-bold">
               Wallet
             </h1>
 
@@ -68,7 +68,7 @@ useEffect(() => {
 
             <button
               title="Back Dashboard"
-              className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
+              className="bg-blue-600 hover:bg-blue-700 px-4 md:px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
             >
               Back Dashboard
             </button>
@@ -84,7 +84,7 @@ useEffect(() => {
             Total Balance
           </p>
 
-          <h2 className="text-6xl font-bold mt-4">
+          <h2 className="text-4xl md:text-4xl md:text-4xl md:text-4xl md:text-4xl md:text-6xl font-bold mt-4">
             ₦{Number(balance).toLocaleString()}
           </h2>
 
@@ -94,7 +94,7 @@ useEffect(() => {
 
               <button
                 title="Fund Wallet"
-                className="bg-white text-black hover:bg-gray-200 px-6 py-3 rounded-2xl font-semibold transition"
+                className="bg-white text-black hover:bg-gray-200 px-4 md:px-6 py-3 rounded-2xl font-semibold transition"
               >
                 Fund Wallet
               </button>
@@ -103,7 +103,7 @@ useEffect(() => {
 
             <button
               title="Withdraw"
-              className="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-2xl font-semibold transition backdrop-blur-xl"
+              className="bg-white/20 hover:bg-white/30 px-4 md:px-6 py-3 rounded-2xl font-semibold transition backdrop-blur-xl"
             >
               Withdraw
             </button>
@@ -115,37 +115,37 @@ useEffect(() => {
         {/* STATS */}
         <div className="grid md:grid-cols-3 gap-6 mb-10">
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
             <p className="text-gray-400">
               Total Deposits
             </p>
 
-            <h3 className="text-4xl font-bold mt-4 text-green-500">
+            <h3 className="text-2xl md:text-4xl font-bold mt-4 text-green-500">
               ₦120,000
             </h3>
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
             <p className="text-gray-400">
               Total Spent
             </p>
 
-            <h3 className="text-4xl font-bold mt-4 text-red-500">
+            <h3 className="text-2xl md:text-4xl font-bold mt-4 text-red-500">
               ₦95,000
             </h3>
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
             <p className="text-gray-400">
               Transactions
             </p>
 
-            <h3 className="text-4xl font-bold mt-4 text-blue-500">
+            <h3 className="text-2xl md:text-4xl font-bold mt-4 text-blue-500">
               58
             </h3>
 
@@ -156,7 +156,7 @@ useEffect(() => {
         {/* QUICK ACTIONS */}
         <div className="mb-10">
 
-          <h2 className="text-3xl font-bold mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">
             Quick Actions
           </h2>
 
@@ -164,9 +164,9 @@ useEffect(() => {
 
             <Link href="/add-funds">
 
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-105 transition shadow-xl cursor-pointer">
 
-                <div className="text-5xl mb-5">
+                <div className="text-2xl md:text-3xl md:text-5xl mb-5">
                   💰
                 </div>
 
@@ -184,9 +184,9 @@ useEffect(() => {
 
             <Link href="/buy-number">
 
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-105 transition shadow-xl cursor-pointer">
 
-                <div className="text-5xl mb-5">
+                <div className="text-2xl md:text-3xl md:text-5xl mb-5">
                   📱
                 </div>
 
@@ -204,9 +204,9 @@ useEffect(() => {
 
             <Link href="/sms-history">
 
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-105 transition shadow-xl cursor-pointer">
 
-                <div className="text-5xl mb-5">
+                <div className="text-2xl md:text-3xl md:text-5xl mb-5">
                   📩
                 </div>
 
@@ -227,11 +227,11 @@ useEffect(() => {
         </div>
 
         {/* TRANSACTION HISTORY */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
           <div className="flex items-center justify-between mb-8">
 
-            <h2 className="text-3xl font-bold">
+            <h2 className="text-2xl md:text-3xl font-bold">
               Recent Transactions
             </h2>
 

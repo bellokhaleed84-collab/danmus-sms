@@ -80,14 +80,14 @@ export default function BuyNumberPage() {
 
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
 
           <div>
 
-            <h1 className="text-3xl md:text-5xl font-bold">
+            <h1 className="text-2xl md:text-3xl md:text-2xl md:text-3xl md:text-5xl font-bold">
               Buy Number
             </h1>
 
@@ -101,7 +101,7 @@ export default function BuyNumberPage() {
 
             <button
               title="Back Dashboard"
-              className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
+              className="bg-blue-600 hover:bg-blue-700 px-4 md:px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
             >
               Back Dashboard
             </button>
@@ -117,7 +117,7 @@ export default function BuyNumberPage() {
             Wallet Balance
           </p>
 
-          <h2 className="text-4xl md:text-6xl font-bold mt-4">
+          <h2 className="text-2xl md:text-4xl md:text-6xl font-bold mt-4">
             ₦{Number(balance).toLocaleString()}
           </h2>
 
@@ -127,7 +127,7 @@ export default function BuyNumberPage() {
 
               <button
                 title="Add Funds"
-                className="bg-white text-black hover:bg-gray-200 px-6 py-3 rounded-2xl font-semibold transition"
+                className="bg-white text-black hover:bg-gray-200 px-4 md:px-6 py-3 rounded-2xl font-semibold transition"
               >
                 Add Funds
               </button>
@@ -141,11 +141,11 @@ export default function BuyNumberPage() {
         {/* BUY CARD */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-[32px] p-6 md:p-10 shadow-2xl">
 
-          <h2 className="text-3xl font-bold mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold mb-8">
             Purchase Number
           </h2>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-5 md:p-8">
 
             {/* COUNTRY */}
             <div>
@@ -160,7 +160,7 @@ export default function BuyNumberPage() {
                 onChange={(e) =>
                   setCountry(e.target.value)
                 }
-                className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 outline-none focus:border-blue-500"
+                className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500"
               >
 
                 <option value="">
@@ -204,7 +204,7 @@ export default function BuyNumberPage() {
                 onChange={(e) =>
                   setService(e.target.value)
                 }
-                className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 outline-none focus:border-blue-500"
+                className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500"
               >
 
                 <option value="">
@@ -238,7 +238,7 @@ export default function BuyNumberPage() {
           </div>
 
           {/* PRICE CARD */}
-          <div className="bg-[var(--input)] border border-[var(--border)] rounded-3xl p-8 mt-10">
+          <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 mt-10">
 
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
 
@@ -254,7 +254,7 @@ export default function BuyNumberPage() {
 
               </div>
 
-              <h2 className="text-5xl font-bold text-blue-500">
+              <h2 className="text-2xl md:text-3xl md:text-5xl font-bold text-blue-500">
                 ₦1,500
               </h2>
 
@@ -276,9 +276,9 @@ export default function BuyNumberPage() {
         {/* SERVICES */}
         <div className="grid md:grid-cols-3 gap-6 mt-10">
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-5xl mb-5">
+            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
               ⚡
             </div>
 
@@ -292,9 +292,9 @@ export default function BuyNumberPage() {
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-5xl mb-5">
+            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
               🌍
             </div>
 
@@ -308,9 +308,9 @@ export default function BuyNumberPage() {
 
           </div>
 
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-5xl mb-5">
+            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
               🔒
             </div>
 

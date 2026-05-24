@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import MobileNav from "@/components/MobileNav";
 
 export default function DashboardPage() {
 
@@ -59,7 +60,7 @@ export default function DashboardPage() {
 
   return (
 
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all duration-300">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all duration-300 pb-28 md:pb-0">
 
       {/* BACKGROUND EFFECTS */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
@@ -141,37 +142,37 @@ export default function DashboardPage() {
         </aside>
 
         {/* MAIN CONTENT */}
-        <div className="flex-1 p-6 md:p-10">
+        <div className="flex-1 p-4 md:p-10">
 
           {/* TOPBAR */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
 
-            <div>
+            <div className="max-w-full overflow-hidden">
 
-              <h1 className="text-5xl font-bold">
+              <h1 className="text-3xl md:text-5xl font-bold break-words">
                 Dashboard
               </h1>
 
-              <p className="text-gray-400 mt-3 text-lg">
+              <p className="text-gray-400 mt-3 text-base md:text-lg break-words">
                 Welcome back, {username}
               </p>
 
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
 
               <Link href="/add-funds">
 
                 <button
                   title="Add Funds"
-                  className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
+                  className="bg-blue-600 hover:bg-blue-700 px-5 md:px-6 py-3 rounded-2xl font-semibold transition shadow-xl"
                 >
                   Add Funds
                 </button>
 
               </Link>
 
-              <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-xl">
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white text-lg md:text-xl font-bold shadow-xl">
 
                 {username.charAt(0).toUpperCase()}
 
@@ -182,13 +183,13 @@ export default function DashboardPage() {
           </div>
 
           {/* WALLET CARD */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-[32px] p-10 shadow-2xl mb-10 text-white">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-[32px] p-6 md:p-10 shadow-2xl mb-10 text-white overflow-hidden">
 
             <p className="text-lg opacity-80">
               Available Balance
             </p>
 
-            <h2 className="text-6xl font-bold mt-4">
+            <h2 className="text-4xl md:text-6xl font-bold mt-4 break-words">
               ₦{Number(balance).toLocaleString()}
             </h2>
 
@@ -221,7 +222,7 @@ export default function DashboardPage() {
           </div>
 
           {/* STATS */}
-          <div className="grid md:grid-cols-4 gap-6 mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
 
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
 
@@ -280,7 +281,7 @@ export default function DashboardPage() {
               Quick Actions
             </h2>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
               <Link href="/buy-number">
 
@@ -347,11 +348,11 @@ export default function DashboardPage() {
           </div>
 
           {/* RECENT ACTIVITY */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-xl">
 
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
 
-              <h2 className="text-3xl font-bold">
+              <h2 className="text-2xl md:text-3xl font-bold">
                 Recent Activity
               </h2>
 
@@ -366,7 +367,7 @@ export default function DashboardPage() {
 
             <div className="space-y-5">
 
-              <div className="flex items-center justify-between bg-[var(--input)] rounded-2xl p-5">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[var(--input)] rounded-2xl p-5">
 
                 <div>
 
@@ -374,13 +375,13 @@ export default function DashboardPage() {
                     No Activity Yet
                   </h3>
 
-                  <p className="text-gray-400 text-sm mt-1">
+                  <p className="text-gray-400 text-sm mt-1 break-words">
                     Your recent orders and wallet activities will appear here
                   </p>
 
                 </div>
 
-                <span className="bg-blue-500/20 text-blue-500 px-4 py-2 rounded-xl text-sm">
+                <span className="bg-blue-500/20 text-blue-500 px-4 py-2 rounded-xl text-sm w-fit">
                   Empty
                 </span>
 
@@ -393,6 +394,8 @@ export default function DashboardPage() {
         </div>
 
       </div>
+
+      <MobileNav />
 
     </main>
   );

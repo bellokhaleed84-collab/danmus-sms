@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import MobileNav from "@/components/MobileNav";
 
 export default function WalletPage() {
   const [balance, setBalance] = useState(0);
@@ -337,6 +338,8 @@ useEffect(() => {
         </div>
 
       </div>
+
+      <MobileNav />
 
     </main>
   );

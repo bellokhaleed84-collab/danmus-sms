@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import MobileNav from "@/components/MobileNav";
 
 export default function SettingsPage() {
 
@@ -118,7 +119,7 @@ export default function SettingsPage() {
 
           <div>
 
-            <h1 className="text-5xl font-bold">
+            <h1 className="text-3xl md:text-5xl font-bold">
               Settings
             </h1>
 
@@ -155,7 +156,7 @@ export default function SettingsPage() {
         <div className="space-y-8">
 
           {/* PROFILE */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-8 shadow-xl">
 
             <div className="flex flex-col md:flex-row md:items-center gap-6 mb-10">
 
@@ -244,7 +245,7 @@ export default function SettingsPage() {
           </div>
 
           {/* NOTIFICATIONS */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-8 shadow-xl">
 
             <h2 className="text-2xl font-bold mb-8">
               Notifications
@@ -335,7 +336,7 @@ export default function SettingsPage() {
           </div>
 
           {/* APPEARANCE */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-8 shadow-xl">
 
             <h2 className="text-2xl font-bold mb-8">
               Appearance
@@ -380,7 +381,7 @@ export default function SettingsPage() {
           </div>
 
           {/* SECURITY */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-8 shadow-xl">
 
             <h2 className="text-2xl font-bold mb-8">
               Security
@@ -445,7 +446,7 @@ export default function SettingsPage() {
           </button>
 
           {/* DANGER ZONE */}
-          <div className="bg-red-950 border border-red-700 rounded-3xl p-8 shadow-xl">
+          <div className="bg-red-950 border border-red-700 rounded-3xl p-5 md:p-8 shadow-xl">
 
             <h2 className="text-3xl font-bold text-red-400 mb-4">
               Danger Zone
@@ -470,6 +471,8 @@ export default function SettingsPage() {
         </div>
 
       </div>
+
+      <MobileNav />
 
     </main>
   );

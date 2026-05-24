@@ -3,6 +3,7 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import MobileNav from "@/components/MobileNav";
 
 export default function AddFundsPage() {
 
@@ -75,7 +76,7 @@ export default function AddFundsPage() {
 
           <div>
 
-            <h1 className="text-5xl font-bold">
+            <h1 className="text-3xl md:text-5xl font-bold">
               Add Funds
             </h1>
 
@@ -99,13 +100,13 @@ export default function AddFundsPage() {
         </div>
 
         {/* WALLET CARD */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-[32px] p-10 shadow-2xl text-white mb-10">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-[32px] p-6 md:p-10 shadow-2xl text-white mb-10">
 
           <p className="text-lg opacity-80">
             Current Wallet Balance
           </p>
 
-          <h2 className="text-6xl font-bold mt-4">
+          <h2 className="text-4xl md:text-6xl font-bold mt-4">
             ₦{Number(balance).toLocaleString()}
           </h2>
 
@@ -116,7 +117,7 @@ export default function AddFundsPage() {
         </div>
 
         {/* PAYMENT FORM */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-[32px] p-10 shadow-2xl">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-[32px] p-6 md:p-10 shadow-2xl">
 
           <h2 className="text-3xl font-bold mb-8">
             Fund Wallet
@@ -291,6 +292,8 @@ export default function AddFundsPage() {
         </div>
 
       </div>
+
+      <MobileNav />
 
     </main>
   );

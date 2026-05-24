@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import MobileNav from "@/components/MobileNav";
 
 export default function SmsHistoryPage() {
 
@@ -283,6 +284,8 @@ export default function SmsHistoryPage() {
         </div>
 
       </div>
+
+      <MobileNav />
 
     </main>
   );

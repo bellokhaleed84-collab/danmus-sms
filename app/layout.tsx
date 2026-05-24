@@ -1,22 +1,37 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "Danmus SMS",
-  description: "SMS Verification Platform",
+  description: "SMS Platform",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
 
   return (
-    <html lang="en" suppressHydrationWarning>
+
+    <html lang="en">
+
+      <head>
+
+        <Script
+          src="https://js.paystack.co/v1/inline.js"
+          strategy="beforeInteractive"
+        />
+
+      </head>
+
       <body>
+
         {children}
+
       </body>
+
     </html>
   );
 }

@@ -11,6 +11,8 @@ export default function AddFundsPage() {
 
   const [amount, setAmount] = useState("");
 
+  const [loading, setLoading] = useState(false);
+
   /* FETCH WALLET */
   useEffect(() => {
 
@@ -53,7 +55,18 @@ export default function AddFundsPage() {
       return;
     }
 
-    alert(`Payment initialized for ₦${amount}`);
+    if (Number(amount) < 100) {
+
+      alert("Minimum funding is ₦100");
+
+      return;
+    }
+
+    setLoading(true);
+
+    /* PASTE YOUR PAYSTACK PAYMENT LINK BELOW */
+    window.location.href =
+      "https://paystack.shop/pay/k7ezjonw0u"
   }
 
   return (
@@ -76,7 +89,7 @@ export default function AddFundsPage() {
 
           <div>
 
-            <h1 className="text-2xl md:text-3xl md:text-2xl md:text-3xl md:text-5xl font-bold">
+            <h1 className="text-2xl md:text-5xl font-bold">
               Add Funds
             </h1>
 
@@ -106,12 +119,12 @@ export default function AddFundsPage() {
             Current Wallet Balance
           </p>
 
-          <h2 className="text-2xl md:text-4xl md:text-6xl font-bold mt-4">
+          <h2 className="text-4xl md:text-6xl font-bold mt-4">
             ₦{Number(balance).toLocaleString()}
           </h2>
 
           <p className="mt-4 opacity-80">
-            Funds are added instantly after successful payment
+            Secure wallet funding with Paystack
           </p>
 
         </div>
@@ -150,11 +163,12 @@ export default function AddFundsPage() {
 
               <button
                 key={value}
+                type="button"
                 title={`₦${value}`}
                 onClick={() =>
                   setAmount(value.toString())
                 }
-                className="bg-[var(--input)] hover:bg-blue-600 hover:text-white border border-[var(--border)] py-3 md:py-4 rounded-2xl font-semibold transition"
+                className="bg-[var(--input)] hover:bg-blue-600 hover:text-white border border-[var(--border)] py-4 rounded-2xl font-semibold transition"
               >
                 ₦{value.toLocaleString()}
               </button>
@@ -172,10 +186,9 @@ export default function AddFundsPage() {
 
             <div className="grid md:grid-cols-3 gap-6">
 
-              {/* PAYSTACK */}
-              <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+              <div className="bg-[var(--input)] border border-[var(--border)] rounded-3xl p-6 shadow-xl">
 
-                <div className="text-2xl md:text-3xl md:text-5xl mb-5">
+                <div className="text-5xl mb-5">
                   💳
                 </div>
 
@@ -184,15 +197,14 @@ export default function AddFundsPage() {
                 </h4>
 
                 <p className="text-gray-400 mt-3">
-                  Secure online card payment
+                  Secure online payment
                 </p>
 
               </div>
 
-              {/* BANK */}
-              <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+              <div className="bg-[var(--input)] border border-[var(--border)] rounded-3xl p-6 shadow-xl">
 
-                <div className="text-2xl md:text-3xl md:text-5xl mb-5">
+                <div className="text-5xl mb-5">
                   🏦
                 </div>
 
@@ -201,15 +213,14 @@ export default function AddFundsPage() {
                 </h4>
 
                 <p className="text-gray-400 mt-3">
-                  Transfer directly to company account
+                  Direct bank transfer support
                 </p>
 
               </div>
 
-              {/* CRYPTO */}
-              <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-105 transition shadow-xl cursor-pointer">
+              <div className="bg-[var(--input)] border border-[var(--border)] rounded-3xl p-6 shadow-xl">
 
-                <div className="text-2xl md:text-3xl md:text-5xl mb-5">
+                <div className="text-5xl mb-5">
                   ₿
                 </div>
 
@@ -218,7 +229,7 @@ export default function AddFundsPage() {
                 </h4>
 
                 <p className="text-gray-400 mt-3">
-                  USDT and Bitcoin payments
+                  Bitcoin and USDT support
                 </p>
 
               </div>
@@ -227,67 +238,19 @@ export default function AddFundsPage() {
 
           </div>
 
-          {/* BUTTON */}
+          {/* PAYMENT BUTTON */}
           <button
             title="Proceed Payment"
             onClick={handlePayment}
-            className="w-full bg-blue-600 hover:bg-blue-700 py-5 rounded-2xl text-xl font-bold transition shadow-xl"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 py-5 rounded-2xl text-xl font-bold transition shadow-xl disabled:opacity-50"
           >
-            Proceed Payment
+
+            {loading
+              ? "Redirecting..."
+              : "Proceed Payment"}
+
           </button>
-
-        </div>
-
-        {/* INFO CARDS */}
-        <div className="grid md:grid-cols-3 gap-6 mt-10">
-
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
-
-            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
-              ⚡
-            </div>
-
-            <h3 className="text-2xl font-bold">
-              Instant Funding
-            </h3>
-
-            <p className="text-gray-400 mt-3">
-              Wallet updates immediately after payment
-            </p>
-
-          </div>
-
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
-
-            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
-              🔒
-            </div>
-
-            <h3 className="text-2xl font-bold">
-              Secure Payments
-            </h3>
-
-            <p className="text-gray-400 mt-3">
-              All transactions are encrypted and protected
-            </p>
-
-          </div>
-
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
-
-            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
-              🌍
-            </div>
-
-            <h3 className="text-2xl font-bold">
-              Multiple Methods
-            </h3>
-
-            <p className="text-gray-400 mt-3">
-              Fund your wallet using different payment systems
-            </p>
-
-          </div>
 
         </div>
 

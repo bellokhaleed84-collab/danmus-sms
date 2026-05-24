@@ -222,6 +222,7 @@ export default function DashboardPage() {
           </div>
 
           {/* STATS */}
+          {/* STATS */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-10">
 
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-4 sm:p-5 md:p-8 shadow-xl">
@@ -231,7 +232,7 @@ export default function DashboardPage() {
               </p>
 
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-3 md:mt-4">
-                120
+                0
               </h3>
 
             </div>
@@ -243,7 +244,7 @@ export default function DashboardPage() {
               </p>
 
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-3 md:mt-4 text-green-500">
-                98
+                0
               </h3>
 
             </div>
@@ -255,7 +256,7 @@ export default function DashboardPage() {
               </p>
 
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-3 md:mt-4 text-yellow-500">
-                12
+                0
               </h3>
 
             </div>
@@ -267,13 +268,12 @@ export default function DashboardPage() {
               </p>
 
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-3 md:mt-4 text-blue-500">
-                90+
+                0
               </h3>
 
             </div>
 
           </div>
-
           {/* QUICK ACTIONS */}
           <div className="mb-8 md:mb-10">
 

@@ -77,26 +77,38 @@ export default function RegisterPage() {
     if (user) {
 
       /* CREATE PROFILE */
-      await supabase
-        .from("profiles")
-        .insert([
-          {
-            id: user.id,
-            full_name: fullName,
-            username,
-            email,
-          },
-        ]);
+      const { error: profileError } =
+        await supabase
+          .from("profiles")
+          .insert([
+            {
+              id: user.id,
+              full_name: fullName,
+              username,
+              email,
+            },
+          ]);
+
+      if (profileError) {
+
+        console.log(profileError);
+      }
 
       /* CREATE WALLET */
-      await supabase
-        .from("wallets")
-        .insert([
-          {
-            user_id: user.id,
-            balance: 0,
-          },
-        ]);
+      const { error: walletError } =
+        await supabase
+          .from("wallets")
+          .insert([
+            {
+              user_id: user.id,
+              balance: 0,
+            },
+          ]);
+
+      if (walletError) {
+
+        console.log(walletError);
+      }
     }
 
     setLoading(false);
@@ -110,7 +122,7 @@ export default function RegisterPage() {
 
   return (
 
-    <main className="auth-background min-h-screen relative flex items-center justify-center px-6 py-10">
+    <main className="auth-background min-h-screen relative flex items-center justify-center px-4 md:px-6 py-6 md:py-10 overflow-x-hidden">
 
       {/* DARK OVERLAY */}
       <div className="absolute inset-0 bg-black/75" />
@@ -118,16 +130,16 @@ export default function RegisterPage() {
       {/* REGISTER CARD */}
       <div className="relative z-10 w-full max-w-lg">
 
-        <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl p-10 shadow-2xl">
+        <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl md:rounded-3xl p-5 sm:p-6 md:p-10 shadow-2xl">
 
           {/* HEADER */}
-          <div className="text-center mb-10">
+          <div className="text-center mb-8 md:mb-10">
 
-            <h1 className="text-4xl font-bold text-white">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
               Create Account
             </h1>
 
-            <p className="text-gray-300 mt-3">
+            <p className="text-gray-300 mt-3 text-sm sm:text-base">
               Join Danmus SMS today
             </p>
 
@@ -136,13 +148,13 @@ export default function RegisterPage() {
           {/* FORM */}
           <form
             onSubmit={handleRegister}
-            className="space-y-6"
+            className="space-y-5 md:space-y-6"
           >
 
             {/* FULL NAME */}
             <div>
 
-              <label className="block text-white mb-2">
+              <label className="block text-white mb-2 text-sm sm:text-base">
                 Full Name
               </label>
 
@@ -154,7 +166,7 @@ export default function RegisterPage() {
                 onChange={(e) =>
                   setFullName(e.target.value)
                 }
-                className="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition"
+                className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition text-sm sm:text-base"
                 required
               />
 
@@ -163,7 +175,7 @@ export default function RegisterPage() {
             {/* USERNAME */}
             <div>
 
-              <label className="block text-white mb-2">
+              <label className="block text-white mb-2 text-sm sm:text-base">
                 Username
               </label>
 
@@ -175,7 +187,7 @@ export default function RegisterPage() {
                 onChange={(e) =>
                   setUsername(e.target.value)
                 }
-                className="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition"
+                className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition text-sm sm:text-base"
                 required
               />
 
@@ -184,7 +196,7 @@ export default function RegisterPage() {
             {/* EMAIL */}
             <div>
 
-              <label className="block text-white mb-2">
+              <label className="block text-white mb-2 text-sm sm:text-base">
                 Email Address
               </label>
 
@@ -196,7 +208,7 @@ export default function RegisterPage() {
                 onChange={(e) =>
                   setEmail(e.target.value)
                 }
-                className="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition"
+                className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition text-sm sm:text-base"
                 required
               />
 
@@ -205,7 +217,7 @@ export default function RegisterPage() {
             {/* PASSWORD */}
             <div>
 
-              <label className="block text-white mb-2">
+              <label className="block text-white mb-2 text-sm sm:text-base">
                 Password
               </label>
 
@@ -223,7 +235,7 @@ export default function RegisterPage() {
                   onChange={(e) =>
                     setPassword(e.target.value)
                   }
-                  className="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition"
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition text-sm sm:text-base"
                   required
                 />
 
@@ -235,7 +247,7 @@ export default function RegisterPage() {
                       !showPassword
                     )
                   }
-                  className="absolute right-4 top-4 text-sm text-gray-300"
+                  className="absolute right-4 top-3 md:top-4 text-sm text-gray-300"
                 >
                   {showPassword
                     ? "Hide"
@@ -249,7 +261,7 @@ export default function RegisterPage() {
             {/* CONFIRM PASSWORD */}
             <div>
 
-              <label className="block text-white mb-2">
+              <label className="block text-white mb-2 text-sm sm:text-base">
                 Confirm Password
               </label>
 
@@ -269,7 +281,7 @@ export default function RegisterPage() {
                       e.target.value
                     )
                   }
-                  className="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition"
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition text-sm sm:text-base"
                   required
                 />
 
@@ -281,7 +293,7 @@ export default function RegisterPage() {
                       !showConfirmPassword
                     )
                   }
-                  className="absolute right-4 top-4 text-sm text-gray-300"
+                  className="absolute right-4 top-3 md:top-4 text-sm text-gray-300"
                 >
                   {showConfirmPassword
                     ? "Hide"
@@ -297,7 +309,7 @@ export default function RegisterPage() {
               title="Register"
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-2xl font-bold text-white transition shadow-xl"
+              className="w-full bg-blue-600 hover:bg-blue-700 py-3 md:py-4 rounded-2xl font-bold text-white transition shadow-xl text-sm sm:text-base"
             >
 
               {loading
@@ -309,7 +321,7 @@ export default function RegisterPage() {
           </form>
 
           {/* LOGIN LINK */}
-          <p className="text-center text-gray-300 mt-8">
+          <p className="text-center text-gray-300 mt-8 text-sm sm:text-base">
 
             Already have an account?{" "}
 

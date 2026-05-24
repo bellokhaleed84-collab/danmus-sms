@@ -10,14 +10,20 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const [fullName, setFullName] = useState("");
+
   const [username, setUsername] = useState("");
+
   const [email, setEmail] = useState("");
 
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] =
+  const [password, setPassword] =
     useState("");
 
-  const [showPassword, setShowPassword] =
+  const [confirmPassword,
+    setConfirmPassword] =
+    useState("");
+
+  const [showPassword,
+    setShowPassword] =
     useState(false);
 
   const [showConfirmPassword,
@@ -40,84 +46,125 @@ export default function RegisterPage() {
       return;
     }
 
-    setLoading(true);
+    if (password.length < 6) {
 
-    const { data, error } =
-      await supabase.auth.signUp({
-
-        email,
-
-        password,
-
-        options: {
-
-          emailRedirectTo:
-            "http://localhost:3000/login",
-
-          data: {
-
-            full_name: fullName,
-
-            username: username,
-          },
-        },
-      });
-
-    if (error) {
-
-      setLoading(false);
-
-      alert(error.message);
+      alert(
+        "Password must be at least 6 characters"
+      );
 
       return;
     }
 
-    const user = data.user;
+    setLoading(true);
 
-    if (user) {
+    try {
+
+      const { data, error } =
+        await supabase.auth.signUp({
+
+          email,
+
+          password,
+
+          options: {
+
+            emailRedirectTo:
+              "http://localhost:3000/auth/callback",
+
+            data: {
+
+              full_name: fullName,
+
+              username: username,
+            },
+          },
+        });
+
+      if (error) {
+
+        console.log(error);
+
+        setLoading(false);
+
+        alert(
+          error.message ||
+          "Registration failed"
+        );
+
+        return;
+      }
+
+      const user = data.user;
+
+      /* EMAIL CONFIRMATION MODE */
+      if (user && !data.session) {
+
+        setLoading(false);
+
+        alert(
+          "Registration successful! Please check your email to verify your account."
+        );
+
+        router.push("/login");
+
+        return;
+      }
 
       /* CREATE PROFILE */
-      const { error: profileError } =
-        await supabase
-          .from("profiles")
-          .insert([
-            {
-              id: user.id,
-              full_name: fullName,
-              username,
-              email,
-            },
-          ]);
+      if (user) {
 
-      if (profileError) {
+        const { error: profileError } =
+          await supabase
+            .from("profiles")
+            .insert([
+              {
+                id: user.id,
+                full_name: fullName,
+                username,
+                email,
+              },
+            ]);
 
-        console.log(profileError);
+        if (profileError) {
+
+          console.log(profileError);
+        }
+
+        /* CREATE WALLET */
+        const { error: walletError } =
+          await supabase
+            .from("wallets")
+            .insert([
+              {
+                user_id: user.id,
+                balance: 0,
+              },
+            ]);
+
+        if (walletError) {
+
+          console.log(walletError);
+        }
       }
 
-      /* CREATE WALLET */
-      const { error: walletError } =
-        await supabase
-          .from("wallets")
-          .insert([
-            {
-              user_id: user.id,
-              balance: 0,
-            },
-          ]);
+      setLoading(false);
 
-      if (walletError) {
+      alert(
+        "Registration successful!"
+      );
 
-        console.log(walletError);
-      }
+      router.push("/login");
+
+    } catch (err) {
+
+      console.log(err);
+
+      setLoading(false);
+
+      alert(
+        "Something went wrong"
+      );
     }
-
-    setLoading(false);
-
-    alert(
-      "Registration successful! Verification email sent."
-    );
-
-    router.push("/login");
   }
 
   return (
@@ -309,7 +356,7 @@ export default function RegisterPage() {
               title="Register"
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 py-3 md:py-4 rounded-2xl font-bold text-white transition shadow-xl text-sm sm:text-base"
+              className="w-full bg-blue-600 hover:bg-blue-700 py-3 md:py-4 rounded-2xl font-bold text-white transition shadow-xl text-sm sm:text-base disabled:opacity-50"
             >
 
               {loading

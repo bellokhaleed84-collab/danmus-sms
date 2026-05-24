@@ -74,25 +74,47 @@ export default function SettingsPage() {
   }, [router]);
 
   /* LOAD THEME */
-  useEffect(() => {
+  /* LOAD THEME */
+useEffect(() => {
 
-    const savedTheme =
-      localStorage.getItem("theme");
+  const savedTheme =
+    localStorage.getItem("theme");
 
-    if (savedTheme === "dark") {
+  /* DEFAULT TO LIGHT MODE */
+  if (!savedTheme) {
 
-      setDarkMode(true);
+    localStorage.setItem(
+      "theme",
+      "light"
+    );
 
-      document.documentElement.classList.add("dark");
+    document.documentElement.classList.remove(
+      "dark"
+    );
 
-    } else {
+    setDarkMode(false);
 
-      setDarkMode(false);
+    return;
+  }
 
-      document.documentElement.classList.remove("dark");
-    }
+  if (savedTheme === "dark") {
 
-  }, []);
+    document.documentElement.classList.add(
+      "dark"
+    );
+
+    setDarkMode(true);
+
+  } else {
+
+    document.documentElement.classList.remove(
+      "dark"
+    );
+
+    setDarkMode(false);
+  }
+
+}, []);
 
   /* TOGGLE THEME */
   function handleThemeToggle() {

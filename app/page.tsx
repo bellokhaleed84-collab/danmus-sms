@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import GoogleLoginButton from "../components/GoogleLoginButton";
 
 export default function HomePage() {
 
@@ -133,6 +134,9 @@ export default function HomePage() {
                 </button>
 
               </Link>
+              <div className="mt-2">
+  <GoogleLoginButton />
+</div>
 
             </div>
 

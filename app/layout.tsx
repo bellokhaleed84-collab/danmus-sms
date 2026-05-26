@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Script from "next/script";
 
+import GoogleProvider from "../components/GoogleProvider";
+
 export const metadata: Metadata = {
   title: "Danmus SMS",
   description: "SMS Platform",
@@ -28,7 +30,9 @@ export default function RootLayout({
 
       <body>
 
-        {children}
+        <GoogleProvider>
+          {children}
+        </GoogleProvider>
 
       </body>
 

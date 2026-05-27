@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import API from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 
@@ -17,28 +17,44 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(e: React.FormEvent) {
+async function handleLogin(e: React.FormEvent) {
 
-    e.preventDefault();
+  e.preventDefault();
+
+  try {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const response = await API.post("/auth/login", {
       email,
       password,
     });
 
+    // Save token
+    localStorage.setItem("token", response.data.token);
+
+    // Save user data
+    localStorage.setItem(
+      "user",
+      JSON.stringify(response.data.user)
+    );
+
+    alert("Login successful");
+
+    router.push("/dashboard");
+
+  } catch (error: any) {
+
+    alert(
+      error.response?.data?.message ||
+      "Login failed"
+    );
+
+  } finally {
+
     setLoading(false);
-
-    if (error) {
-
-      alert(error.message);
-
-    } else {
-
-      router.push("/dashboard");
-    }
   }
+}
 
   return (
 

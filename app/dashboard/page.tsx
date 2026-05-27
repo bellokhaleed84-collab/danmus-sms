@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import MobileNav from "@/components/MobileNav";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
+
+  const router = useRouter();
 
   const [balance, setBalance] = useState(0);
 
@@ -16,47 +18,55 @@ export default function DashboardPage() {
 
     async function fetchUserData() {
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
 
-      if (!user) return;
+        const token = localStorage.getItem("token");
 
-      /* FETCH WALLET */
-      const { data: walletData, error: walletError } =
-        await supabase
-          .from("wallets")
-          .select("balance")
-          .eq("user_id", user.id)
-          .single();
+        if (!token) {
 
-      if (walletData) {
+          router.push("/login");
 
-        setBalance(walletData.balance);
-      }
+          return;
+        }
 
-      if (walletError) {
+        const response = await fetch(
+          "http://localhost:5000/api/users/profile",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-        console.log(walletError);
-      }
+        const data = await response.json();
 
-      /* FETCH PROFILE */
-      const { data: profileData } =
-        await supabase
-          .from("profiles")
-          .select("username")
-          .eq("id", user.id)
-          .single();
+        console.log(data);
 
-      if (profileData) {
+        if (!response.ok) {
 
-        setUsername(profileData.username);
+          localStorage.removeItem("token");
+
+          localStorage.removeItem("user");
+
+          router.push("/login");
+
+          return;
+        }
+
+        setBalance(data.balance || 0);
+
+        setUsername(data.name || "User");
+
+      } catch (error) {
+
+        console.log(error);
       }
     }
 
     fetchUserData();
 
-  }, []);
+  }, [router]);
 
   return (
 
@@ -126,16 +136,20 @@ export default function DashboardPage() {
 
           <div className="mt-auto">
 
-            <Link href="/login">
+            <button
+              title="Logout"
+              onClick={() => {
 
-              <button
-                title="Logout"
-                className="w-full bg-red-600 hover:bg-red-700 py-4 rounded-2xl font-semibold transition"
-              >
-                Logout
-              </button>
+                localStorage.removeItem("token");
 
-            </Link>
+                localStorage.removeItem("user");
+
+                router.push("/login");
+              }}
+              className="w-full bg-red-600 hover:bg-red-700 py-4 rounded-2xl font-semibold transition"
+            >
+              Logout
+            </button>
 
           </div>
 
@@ -222,7 +236,6 @@ export default function DashboardPage() {
           </div>
 
           {/* STATS */}
-          {/* STATS */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-10">
 
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-4 sm:p-5 md:p-8 shadow-xl">
@@ -274,6 +287,7 @@ export default function DashboardPage() {
             </div>
 
           </div>
+
           {/* QUICK ACTIONS */}
           <div className="mb-8 md:mb-10">
 

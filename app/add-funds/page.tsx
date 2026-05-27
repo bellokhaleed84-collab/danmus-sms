@@ -1,11 +1,13 @@
 "use client";
 
-import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import MobileNav from "@/components/MobileNav";
+import { useRouter } from "next/navigation";
 
 export default function AddFundsPage() {
+
+  const router = useRouter();
 
   const [balance, setBalance] = useState(0);
 
@@ -13,60 +15,121 @@ export default function AddFundsPage() {
 
   const [loading, setLoading] = useState(false);
 
-  /* FETCH WALLET */
+  const [email, setEmail] = useState("");
+
+  /* FETCH USER DATA */
   useEffect(() => {
 
-    async function fetchWallet() {
+    async function fetchUser() {
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
 
-      if (!user) return;
+        const token = localStorage.getItem("token");
 
-      const { data, error } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("user_id", user.id)
-        .single();
+        if (!token) {
 
-      if (data) {
+          router.push("/login");
 
-        setBalance(data.balance);
-      }
+          return;
+        }
 
-      if (error) {
+        const response = await fetch(
+          "http://localhost:5000/api/users/profile",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+          router.push("/login");
+
+          return;
+        }
+
+        setBalance(data.balance || 0);
+
+        setEmail(data.email);
+
+      } catch (error) {
 
         console.log(error);
       }
     }
 
-    fetchWallet();
+    fetchUser();
 
-  }, []);
+  }, [router]);
 
-  /* PAYMENT */
-  function handlePayment() {
+  /* HANDLE PAYMENT */
+  async function handlePayment() {
 
-    if (!amount) {
+    try {
 
-      alert("Please enter amount");
+      if (!amount) {
 
-      return;
+        alert("Please enter amount");
+
+        return;
+      }
+
+      if (Number(amount) < 100) {
+
+        alert("Minimum funding is ₦100");
+
+        return;
+      }
+
+      setLoading(true);
+
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        "http://localhost:5000/api/payment/initialize",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            email,
+            amount,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      console.log(data);
+
+      if (!response.ok) {
+
+        alert(data.message || "Payment initialize failed");
+
+        setLoading(false);
+
+        return;
+      }
+
+      window.location.href =
+        data.data.authorization_url;
+
+    } catch (error) {
+
+      console.log(error);
+
+      alert("Something went wrong");
+
+    } finally {
+
+      setLoading(false);
     }
-
-    if (Number(amount) < 100) {
-
-      alert("Minimum funding is ₦100");
-
-      return;
-    }
-
-    setLoading(true);
-
-    /* PASTE YOUR PAYSTACK PAYMENT LINK BELOW */
-    window.location.href =
-      "https://paystack.shop/pay/k7ezjonw0u"
   }
 
   return (
@@ -177,67 +240,6 @@ export default function AddFundsPage() {
 
           </div>
 
-          {/* PAYMENT METHODS */}
-          <div className="mb-10">
-
-            <h3 className="text-2xl font-bold mb-6">
-              Payment Methods
-            </h3>
-
-            <div className="grid md:grid-cols-3 gap-6">
-
-              <div className="bg-[var(--input)] border border-[var(--border)] rounded-3xl p-6 shadow-xl">
-
-                <div className="text-5xl mb-5">
-                  💳
-                </div>
-
-                <h4 className="text-2xl font-bold">
-                  Paystack
-                </h4>
-
-                <p className="text-gray-400 mt-3">
-                  Secure online payment
-                </p>
-
-              </div>
-
-              <div className="bg-[var(--input)] border border-[var(--border)] rounded-3xl p-6 shadow-xl">
-
-                <div className="text-5xl mb-5">
-                  🏦
-                </div>
-
-                <h4 className="text-2xl font-bold">
-                  Bank Transfer
-                </h4>
-
-                <p className="text-gray-400 mt-3">
-                  Direct bank transfer support
-                </p>
-
-              </div>
-
-              <div className="bg-[var(--input)] border border-[var(--border)] rounded-3xl p-6 shadow-xl">
-
-                <div className="text-5xl mb-5">
-                  ₿
-                </div>
-
-                <h4 className="text-2xl font-bold">
-                  Crypto
-                </h4>
-
-                <p className="text-gray-400 mt-3">
-                  Bitcoin and USDT support
-                </p>
-
-              </div>
-
-            </div>
-
-          </div>
-
           {/* PAYMENT BUTTON */}
           <button
             title="Proceed Payment"
@@ -247,7 +249,7 @@ export default function AddFundsPage() {
           >
 
             {loading
-              ? "Redirecting..."
+              ? "Processing..."
               : "Proceed Payment"}
 
           </button>

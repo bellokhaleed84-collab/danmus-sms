@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import API from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
@@ -59,93 +59,27 @@ export default function RegisterPage() {
 
     try {
 
-      const { data, error } =
-        await supabase.auth.signUp({
+      const response =
+        await API.post("/auth/register", {
+
+          name: fullName,
+
+          username,
 
           email,
 
           password,
-
-          options: {
-
-            emailRedirectTo:
-              "http://localhost:3000/auth/callback",
-
-            data: {
-
-              full_name: fullName,
-
-              username: username,
-            },
-          },
         });
 
-      if (error) {
+      localStorage.setItem(
+        "token",
+        response.data.token
+      );
 
-        console.log(error);
-
-        setLoading(false);
-
-        alert(
-          error.message ||
-          "Registration failed"
-        );
-
-        return;
-      }
-
-      const user = data.user;
-
-      /* EMAIL CONFIRMATION MODE */
-      if (user && !data.session) {
-
-        setLoading(false);
-
-        alert(
-          "Registration successful! Please check your email to verify your account."
-        );
-
-        router.push("/login");
-
-        return;
-      }
-
-      /* CREATE PROFILE */
-      if (user) {
-
-        const { error: profileError } =
-          await supabase
-            .from("profiles")
-            .insert([
-              {
-                id: user.id,
-                full_name: fullName,
-                username,
-                email,
-              },
-            ]);
-
-        if (profileError) {
-
-          console.log(profileError);
-        }
-
-        /* CREATE WALLET */
-        const { error: walletError } =
-          await supabase
-            .from("wallets")
-            .insert([
-              {
-                user_id: user.id,
-                balance: 0,
-              },
-            ]);
-
-        if (walletError) {
-
-          console.log(walletError);
-        }
-      }
+      localStorage.setItem(
+        "user",
+        JSON.stringify(response.data.user)
+      );
 
       setLoading(false);
 
@@ -153,16 +87,17 @@ export default function RegisterPage() {
         "Registration successful!"
       );
 
-      router.push("/login");
+      router.push("/dashboard");
 
-    } catch (err) {
+    } catch (error: any) {
 
-      console.log(err);
+      console.log(error);
 
       setLoading(false);
 
       alert(
-        "Something went wrong"
+        error.response?.data?.message ||
+        "Registration failed"
       );
     }
   }
@@ -171,15 +106,12 @@ export default function RegisterPage() {
 
     <main className="auth-background min-h-screen relative flex items-center justify-center px-4 md:px-6 py-6 md:py-10 overflow-x-hidden">
 
-      {/* DARK OVERLAY */}
       <div className="absolute inset-0 bg-black/75" />
 
-      {/* REGISTER CARD */}
       <div className="relative z-10 w-full max-w-lg">
 
         <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl md:rounded-3xl p-5 sm:p-6 md:p-10 shadow-2xl">
 
-          {/* HEADER */}
           <div className="text-center mb-8 md:mb-10">
 
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
@@ -192,13 +124,11 @@ export default function RegisterPage() {
 
           </div>
 
-          {/* FORM */}
           <form
             onSubmit={handleRegister}
             className="space-y-5 md:space-y-6"
           >
 
-            {/* FULL NAME */}
             <div>
 
               <label className="block text-white mb-2 text-sm sm:text-base">
@@ -206,20 +136,18 @@ export default function RegisterPage() {
               </label>
 
               <input
-                title="Full Name"
                 type="text"
                 placeholder="Enter your full name"
                 value={fullName}
                 onChange={(e) =>
                   setFullName(e.target.value)
                 }
-                className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition text-sm sm:text-base"
+                className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500"
                 required
               />
 
             </div>
 
-            {/* USERNAME */}
             <div>
 
               <label className="block text-white mb-2 text-sm sm:text-base">
@@ -227,20 +155,18 @@ export default function RegisterPage() {
               </label>
 
               <input
-                title="Username"
                 type="text"
                 placeholder="Choose a username"
                 value={username}
                 onChange={(e) =>
                   setUsername(e.target.value)
                 }
-                className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition text-sm sm:text-base"
+                className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500"
                 required
               />
 
             </div>
 
-            {/* EMAIL */}
             <div>
 
               <label className="block text-white mb-2 text-sm sm:text-base">
@@ -248,20 +174,18 @@ export default function RegisterPage() {
               </label>
 
               <input
-                title="Email Address"
                 type="email"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) =>
                   setEmail(e.target.value)
                 }
-                className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition text-sm sm:text-base"
+                className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500"
                 required
               />
 
             </div>
 
-            {/* PASSWORD */}
             <div>
 
               <label className="block text-white mb-2 text-sm sm:text-base">
@@ -271,7 +195,6 @@ export default function RegisterPage() {
               <div className="relative">
 
                 <input
-                  title="Password"
                   type={
                     showPassword
                       ? "text"
@@ -282,12 +205,11 @@ export default function RegisterPage() {
                   onChange={(e) =>
                     setPassword(e.target.value)
                   }
-                  className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition text-sm sm:text-base"
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500"
                   required
                 />
 
                 <button
-                  title="Toggle Password"
                   type="button"
                   onClick={() =>
                     setShowPassword(
@@ -305,7 +227,6 @@ export default function RegisterPage() {
 
             </div>
 
-            {/* CONFIRM PASSWORD */}
             <div>
 
               <label className="block text-white mb-2 text-sm sm:text-base">
@@ -315,7 +236,6 @@ export default function RegisterPage() {
               <div className="relative">
 
                 <input
-                  title="Confirm Password"
                   type={
                     showConfirmPassword
                       ? "text"
@@ -328,12 +248,11 @@ export default function RegisterPage() {
                       e.target.value
                     )
                   }
-                  className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500 transition text-sm sm:text-base"
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-white placeholder-gray-300 outline-none focus:border-blue-500"
                   required
                 />
 
                 <button
-                  title="Toggle Confirm Password"
                   type="button"
                   onClick={() =>
                     setShowConfirmPassword(
@@ -351,12 +270,10 @@ export default function RegisterPage() {
 
             </div>
 
-            {/* REGISTER BUTTON */}
             <button
-              title="Register"
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 py-3 md:py-4 rounded-2xl font-bold text-white transition shadow-xl text-sm sm:text-base disabled:opacity-50"
+              className="w-full bg-blue-600 hover:bg-blue-700 py-3 md:py-4 rounded-2xl font-bold text-white transition shadow-xl"
             >
 
               {loading
@@ -367,7 +284,6 @@ export default function RegisterPage() {
 
           </form>
 
-          {/* LOGIN LINK */}
           <p className="text-center text-gray-300 mt-8 text-sm sm:text-base">
 
             Already have an account?{" "}

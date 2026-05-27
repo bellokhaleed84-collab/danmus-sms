@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import MobileNav from "@/components/MobileNav";
 
@@ -13,35 +12,44 @@ export default function BuyNumberPage() {
 
   const [balance, setBalance] = useState(0);
 
-  /* FETCH WALLET */
+  /* FETCH USER BALANCE FROM BACKEND */
   useEffect(() => {
 
-    async function fetchWallet() {
+    async function fetchUser() {
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
 
-      if (!user) return;
+        const token =
+          localStorage.getItem("token");
 
-      const { data, error } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("user_id", user.id)
-        .single();
+        if (!token) return;
 
-      if (data) {
+        const response = await fetch(
+          "http://localhost:5000/api/users/profile",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-        setBalance(data.balance);
-      }
+        const data = await response.json();
 
-      if (error) {
+        console.log(data);
+
+        if (response.ok) {
+
+          setBalance(data.balance || 0);
+        }
+
+      } catch (error) {
 
         console.log(error);
       }
     }
 
-    fetchWallet();
+    fetchUser();
 
   }, []);
 
@@ -87,7 +95,7 @@ export default function BuyNumberPage() {
 
           <div>
 
-            <h1 className="text-2xl md:text-3xl md:text-2xl md:text-3xl md:text-5xl font-bold">
+            <h1 className="text-2xl md:text-5xl font-bold">
               Buy Number
             </h1>
 
@@ -117,7 +125,7 @@ export default function BuyNumberPage() {
             Wallet Balance
           </p>
 
-          <h2 className="text-2xl md:text-4xl md:text-6xl font-bold mt-4">
+          <h2 className="text-2xl md:text-6xl font-bold mt-4">
             ₦{Number(balance).toLocaleString()}
           </h2>
 
@@ -254,7 +262,7 @@ export default function BuyNumberPage() {
 
               </div>
 
-              <h2 className="text-2xl md:text-3xl md:text-5xl font-bold text-blue-500">
+              <h2 className="text-2xl md:text-5xl font-bold text-blue-500">
                 ₦1,500
               </h2>
 
@@ -278,7 +286,7 @@ export default function BuyNumberPage() {
 
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
+            <div className="text-5xl mb-5">
               ⚡
             </div>
 
@@ -294,7 +302,7 @@ export default function BuyNumberPage() {
 
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
+            <div className="text-5xl mb-5">
               🌍
             </div>
 
@@ -310,7 +318,7 @@ export default function BuyNumberPage() {
 
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
 
-            <div className="text-2xl md:text-3xl md:text-5xl mb-5">
+            <div className="text-5xl mb-5">
               🔒
             </div>
 
@@ -328,7 +336,7 @@ export default function BuyNumberPage() {
 
       </div>
 
-<MobileNav />
+      <MobileNav />
 
     </main>
   );

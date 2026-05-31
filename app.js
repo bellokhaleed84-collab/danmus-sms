@@ -9,15 +9,19 @@ const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 
-// Middleware
-const cors = require("cors");
-
+// ✅ CORS FIX (IMPORTANT)
 app.use(cors({
-  origin: "https://danmus-sms-1.onrender.com",
+  origin: [
+    "https://danmus-sms-1.onrender.com",
+    "https://danmus-sms.onrender.com",
+    "http://localhost:3000"
+  ],
   credentials: true
 }));
 
 app.options("*", cors());
+
+// Middleware
 app.use(express.json());
 
 // Routes
@@ -27,7 +31,7 @@ app.use("/api/sms", smsRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/users", userRoutes);
 
-// Main Route
+// Test route
 app.get("/", (req, res) => {
   res.send("Backend is running...");
 });

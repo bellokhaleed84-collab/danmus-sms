@@ -25,14 +25,15 @@ export default function BuyNumberPage() {
         if (!token) return;
 
         const response = await fetch(
-          "http://localhost:5000/api/users/profile",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+  `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`,
+  {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+       
 
         const data = await response.json();
 

@@ -34,15 +34,14 @@ export default function AddFundsPage() {
         }
 
         const response = await fetch(
-          "http://localhost:5000/api/users/profile",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
+  `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`,
+  {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
         const data = await response.json();
 
         if (!response.ok) {
@@ -90,19 +89,19 @@ export default function AddFundsPage() {
       const token = localStorage.getItem("token");
 
       const response = await fetch(
-        "http://localhost:5000/api/payment/initialize",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            email,
-            amount,
-          }),
-        }
-      );
+  `${process.env.NEXT_PUBLIC_API_URL}/api/payment/initialize`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      email,
+      amount,
+    }),
+  }
+);
 
       const data = await response.json();
 

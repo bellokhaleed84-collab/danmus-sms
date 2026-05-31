@@ -34,104 +34,125 @@ export default function SettingsPage() {
 
     async function fetchUserData() {
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
 
-      if (!user) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-        router.push("/login");
+        /* FIX AUTO LOGOUT */
+        if (!session) {
 
-        return;
-      }
+          setLoading(false);
 
-      setEmail(user.email || "");
+          return;
+        }
 
-      const { data, error } =
-        await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
+        const user = session.user;
 
-      if (data) {
+        setEmail(user.email || "");
 
-        setFullName(data.full_name || "");
+        const { data, error } =
+          await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single();
 
-        setUsername(data.username || "");
-      }
+        if (data) {
 
-      if (error) {
+          setFullName(data.full_name || "");
+
+          setUsername(data.username || "");
+        }
+
+        if (error) {
+
+          console.log(error);
+        }
+
+      } catch (error) {
 
         console.log(error);
-      }
 
-      setLoading(false);
+      } finally {
+
+        setLoading(false);
+      }
     }
 
     fetchUserData();
 
-  }, [router]);
+  }, []);
 
   /* LOAD THEME */
-  /* LOAD THEME */
-useEffect(() => {
+  useEffect(() => {
 
-  const savedTheme =
-    localStorage.getItem("theme");
+    const savedTheme =
+      localStorage.getItem("theme");
 
-  /* DEFAULT TO LIGHT MODE */
-  if (!savedTheme) {
+    /* DEFAULT LIGHT MODE */
+    if (!savedTheme) {
 
-    localStorage.setItem(
-      "theme",
-      "light"
-    );
+      localStorage.setItem(
+        "theme",
+        "light"
+      );
 
-    document.documentElement.classList.remove(
-      "dark"
-    );
+      document.documentElement.classList.remove(
+        "dark"
+      );
 
-    setDarkMode(false);
+      setDarkMode(false);
 
-    return;
-  }
+      return;
+    }
 
-  if (savedTheme === "dark") {
+    if (savedTheme === "dark") {
 
-    document.documentElement.classList.add(
-      "dark"
-    );
+      document.documentElement.classList.add(
+        "dark"
+      );
 
-    setDarkMode(true);
+      setDarkMode(true);
 
-  } else {
+    } else {
 
-    document.documentElement.classList.remove(
-      "dark"
-    );
+      document.documentElement.classList.remove(
+        "dark"
+      );
 
-    setDarkMode(false);
-  }
+      setDarkMode(false);
+    }
 
-}, []);
+  }, []);
 
   /* TOGGLE THEME */
   function handleThemeToggle() {
 
     if (darkMode) {
 
-      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.remove(
+        "dark"
+      );
 
-      localStorage.setItem("theme", "light");
+      localStorage.setItem(
+        "theme",
+        "light"
+      );
 
       setDarkMode(false);
 
     } else {
 
-      document.documentElement.classList.add("dark");
+      document.documentElement.classList.add(
+        "dark"
+      );
 
-      localStorage.setItem("theme", "dark");
+      localStorage.setItem(
+        "theme",
+        "dark"
+      );
 
       setDarkMode(true);
     }
@@ -140,39 +161,55 @@ useEffect(() => {
   /* SAVE SETTINGS */
   async function handleSave() {
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
 
-    if (!user) return;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    const { error } =
-      await supabase
-        .from("profiles")
-        .update({
-          full_name: fullName,
-          username: username,
-        })
-        .eq("id", user.id);
+      if (!session) {
 
-    if (error) {
+        alert("User not logged in");
 
-      alert("Failed to save settings");
+        return;
+      }
+
+      const user = session.user;
+
+      const { error } =
+        await supabase
+          .from("profiles")
+          .update({
+            full_name: fullName,
+            username: username,
+          })
+          .eq("id", user.id);
+
+      if (error) {
+
+        alert("Failed to save settings");
+
+        console.log(error);
+
+        return;
+      }
+
+      setSavedMessage(
+        "Settings saved successfully!"
+      );
+
+      setTimeout(() => {
+
+        setSavedMessage("");
+
+      }, 3000);
+
+    } catch (error) {
 
       console.log(error);
 
-      return;
+      alert("Something went wrong");
     }
-
-    setSavedMessage(
-      "Settings saved successfully!"
-    );
-
-    setTimeout(() => {
-
-      setSavedMessage("");
-
-    }, 3000);
   }
 
   /* LOGOUT */
@@ -200,7 +237,7 @@ useEffect(() => {
 
     return (
 
-      <main className="min-h-screen flex items-center justify-center bg-[var(--background)] text-white">
+      <main className="min-h-screen flex items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
 
         Loading...
 
@@ -211,6 +248,15 @@ useEffect(() => {
   return (
 
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] px-4 md:px-6 py-6 md:py-10 transition-all duration-300">
+
+      {/* BACKGROUND EFFECTS */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/20 blur-[120px] rounded-full" />
+
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 blur-[120px] rounded-full" />
+
+      </div>
 
       <div className="max-w-5xl mx-auto">
 
@@ -263,14 +309,16 @@ useEffect(() => {
               {/* AVATAR */}
               <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-4xl font-bold text-white shadow-xl">
 
-                {username.charAt(0).toUpperCase()}
+                {username
+                  ? username.charAt(0).toUpperCase()
+                  : "U"}
 
               </div>
 
               <div>
 
                 <h2 className="text-3xl font-bold">
-                  {username}
+                  {username || "User"}
                 </h2>
 
                 <p className="text-green-400 mt-2">
@@ -357,7 +405,7 @@ useEffect(() => {
 
             <div className="space-y-5">
 
-              {/* EMAIL NOTIFICATION */}
+              {/* EMAIL */}
               <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl p-5 flex items-center justify-between">
 
                 <div>
@@ -398,7 +446,7 @@ useEffect(() => {
 
               </div>
 
-              {/* SMS NOTIFICATION */}
+              {/* SMS */}
               <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl p-5 flex items-center justify-between">
 
                 <div>

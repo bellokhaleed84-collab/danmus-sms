@@ -10,7 +10,14 @@ const userRoutes = require("./routes/userRoutes");
 const app = express();
 
 // Middleware
-app.use(cors());
+const cors = require("cors");
+
+app.use(cors({
+  origin: "https://danmus-sms-1.onrender.com",
+  credentials: true
+}));
+
+app.options("*", cors());
 app.use(express.json());
 
 // Routes

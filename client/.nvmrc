@@ -1,1 +1,0 @@
-Set-Content -Path client\.nvmrc -Value "20" -Encoding UTF8

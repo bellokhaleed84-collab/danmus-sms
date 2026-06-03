@@ -9,27 +9,43 @@ const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 
-// Middleware
-const cors = require("cors");
+// ✅ CORS config
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      const allowedOrigins = [
+        "https://danmus-sms-1.onrender.com",
+        "https://danmus-sms.onrender.com",
+        "http://localhost:3000",
+      ];
+      // Allow Postman / curl (no origin) and listed origins
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS: " + origin));
+      }
+    },
+    credentials: true,
+  })
+);
 
-app.use(cors({
-  origin: "https://danmus-sms-1.onrender.com",
-  credentials: true
-}));
+// ✅ Preflight fix — regex wildcard, NOT string "/*" or "*"
+app.options(/.*/, cors());
 
-app.options("*", cors());
+// ✅ Body parsers
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// ✅ Health check
+app.get("/", (req, res) => {
+  res.json({ status: "Backend is running ✅" });
+});
+
+// ✅ Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/sms", smsRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/users", userRoutes);
-
-// Main Route
-app.get("/", (req, res) => {
-  res.send("Backend is running...");
-});
 
 module.exports = app;

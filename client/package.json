@@ -2,6 +2,9 @@
   "name": "client",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,10 +13,9 @@
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
-    "@supabase/supabase-js": "^2.106.1",
     "axios": "^1.16.1",
     "google-auth-library": "^10.6.2",
-    "next": "16.2.6",
+    "next": "^15.3.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-paystack": "^6.0.0",
@@ -25,7 +27,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "^15.3.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

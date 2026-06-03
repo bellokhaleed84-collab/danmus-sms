@@ -14,11 +14,10 @@ app.use(
   cors({
     origin: function (origin, callback) {
       const allowedOrigins = [
-        "https://danmus-sms-1.onrender.com",
-        "https://danmus-sms.onrender.com",
-        "http://localhost:3000",
+        "https://danmus-sms-production.up.railway.app", // Railway backend
+        "https://danmus-sms-client.up.railway.app",     // Railway frontend (update after deploy)
+        "http://localhost:3000",                         // Local dev
       ];
-      // Allow Postman / curl (no origin) and listed origins
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -29,7 +28,7 @@ app.use(
   })
 );
 
-// ✅ Preflight fix — regex wildcard, NOT string "/*" or "*"
+// ✅ Preflight fix
 app.options(/.*/, cors());
 
 // ✅ Body parsers

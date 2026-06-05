@@ -9,26 +9,8 @@ const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 
-// ✅ CORS config
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      const allowedOrigins = [
-  "https://danmus-sms-ynmz.vercel.app",              // ✅ Vercel frontend
-  "https://danmus-sms-production.up.railway.app",     // Railway backend
-  "http://localhost:3000",                             // Local dev
-];
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS: " + origin));
-      }
-    },
-    credentials: true,
-  })
-);
-
-// ✅ Preflight fix
+// ✅ Allow ALL origins
+app.use(cors());
 app.options(/.*/, cors());
 
 // ✅ Body parsers

@@ -15,7 +15,7 @@ app.use(
     origin: function (origin, callback) {
       const allowedOrigins = [
         "https://danmus-sms-production.up.railway.app", // Railway backend
-        "https://danmus-sms-client.up.railway.app",     // Railway frontend (update after deploy)
+        "https://danmus-sms-ynmz.vercel.app/",     // Railway frontend (update after deploy)
         "http://localhost:3000",                         // Local dev
       ];
       if (!origin || allowedOrigins.includes(origin)) {

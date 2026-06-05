@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import MobileNav from "@/components/MobileNav";
 
 export default function SettingsPage() {
@@ -36,40 +35,24 @@ export default function SettingsPage() {
 
       try {
 
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const token = localStorage.getItem("token");
 
-        /* FIX AUTO LOGOUT */
-        if (!session) {
+        const user = JSON.parse(
+          localStorage.getItem("user") || "{}"
+        );
+
+        if (!token || !user?.email) {
 
           setLoading(false);
 
           return;
         }
 
-        const user = session.user;
-
         setEmail(user.email || "");
 
-        const { data, error } =
-          await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", user.id)
-            .single();
+        setFullName(user.name || "");
 
-        if (data) {
-
-          setFullName(data.full_name || "");
-
-          setUsername(data.username || "");
-        }
-
-        if (error) {
-
-          console.log(error);
-        }
+        setUsername(user.name || "");
 
       } catch (error) {
 
@@ -163,36 +146,26 @@ export default function SettingsPage() {
 
     try {
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const token = localStorage.getItem("token");
 
-      if (!session) {
+      if (!token) {
 
         alert("User not logged in");
 
         return;
       }
 
-      const user = session.user;
+      /* UPDATE LOCAL STORAGE */
+      const user = JSON.parse(
+        localStorage.getItem("user") || "{}"
+      );
 
-      const { error } =
-        await supabase
-          .from("profiles")
-          .update({
-            full_name: fullName,
-            username: username,
-          })
-          .eq("id", user.id);
+      user.name = fullName;
 
-      if (error) {
-
-        alert("Failed to save settings");
-
-        console.log(error);
-
-        return;
-      }
+      localStorage.setItem(
+        "user",
+        JSON.stringify(user)
+      );
 
       setSavedMessage(
         "Settings saved successfully!"
@@ -213,9 +186,9 @@ export default function SettingsPage() {
   }
 
   /* LOGOUT */
-  async function handleLogout() {
+  function handleLogout() {
 
-    await supabase.auth.signOut();
+    localStorage.clear();
 
     router.push("/login");
   }
@@ -385,6 +358,7 @@ export default function SettingsPage() {
                 <input
                   title="Email Address"
                   type="email"
+                  placeholder="Your email"
                   value={email}
                   readOnly
                   className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 opacity-70"

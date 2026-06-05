@@ -14,10 +14,10 @@ app.use(
   cors({
     origin: function (origin, callback) {
       const allowedOrigins = [
-        "https://danmus-sms-production.up.railway.app", // Railway backend
-        "https://danmus-sms-ynmz.vercel.app/",     // Railway frontend (update after deploy)
-        "http://localhost:3000",                         // Local dev
-      ];
+  "https://danmus-sms-ynmz.vercel.app",              // ✅ Vercel frontend
+  "https://danmus-sms-production.up.railway.app",     // Railway backend
+  "http://localhost:3000",                             // Local dev
+];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {

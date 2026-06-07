@@ -36,7 +36,7 @@ const initializePayment = async (req, res) => {
     amount: amount * 100,
 
     callback_url:
-      "http://localhost:3000/payment-success",
+      "https://danmus-sms-ynmz.vercel.app/payment-success"
   },
   {
     headers: {

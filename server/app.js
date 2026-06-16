@@ -6,6 +6,7 @@ const walletRoutes = require("./routes/walletRoutes");
 const smsRoutes = require("./routes/smsRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const userRoutes = require("./routes/userRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
@@ -24,5 +25,6 @@ app.use("/api/wallet", walletRoutes);
 app.use("/api/sms", smsRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/admin", adminRoutes);
 
 module.exports = app;

@@ -22,6 +22,10 @@ export default function DashboardPage() {
 
         const token = localStorage.getItem("token");
 
+        const cachedUser = JSON.parse(
+          localStorage.getItem("user") || "{}"
+        );
+
         if (!token) {
 
           router.push("/login");
@@ -29,26 +33,37 @@ export default function DashboardPage() {
           return;
         }
 
-       const response = await fetch(
-  `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`,
-  {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  }
-);
+        /* SET CACHED DATA FIRST SO DASHBOARD LOADS INSTANTLY */
+        if (cachedUser?.name) {
+
+          setUsername(cachedUser.name);
+        }
+
+        if (cachedUser?.balance !== undefined) {
+
+          setBalance(cachedUser.balance);
+        }
+
+        /* THEN FETCH FRESH DATA FROM BACKEND */
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
         const data = await response.json();
 
         console.log(data);
 
         if (!response.ok) {
 
-          localStorage.removeItem("token");
-
-          localStorage.removeItem("user");
-
-          router.push("/login");
+          /* DON'T LOGOUT ON 401 — JUST USE CACHED DATA */
+          console.log("Profile fetch failed, using cached data");
 
           return;
         }
@@ -56,6 +71,9 @@ export default function DashboardPage() {
         setBalance(data.balance || 0);
 
         setUsername(data.name || "User");
+
+        /* UPDATE CACHE */
+        localStorage.setItem("user", JSON.stringify(data));
 
       } catch (error) {
 

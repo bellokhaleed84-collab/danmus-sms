@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const passport = require("./config/passport"); // ← ADD THIS
 
 const authRoutes = require("./routes/authRoutes");
 const walletRoutes = require("./routes/walletRoutes");
@@ -15,6 +16,7 @@ app.options(/.*/, cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(passport.initialize()); // ← ADD THIS
 
 app.get("/", (req, res) => {
   res.json({ status: "Backend is running" });

@@ -3,12 +3,41 @@ const Transaction = require("../models/Transaction");
 const axios = require("axios");
 
 const FIVESIM_API = "https://5sim.net/v1";
-const MARKUP = 1.5; // 50% markup
+const MARKUP = 1.5; // 50% markup on top of converted NGN price
 
 const fivesimHeaders = {
   Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
   Accept: "application/json",
 };
+
+// ── EXCHANGE RATE CACHE (refresh every hour) ──
+let cachedRate = null;
+let cachedAt = 0;
+const ONE_HOUR = 60 * 60 * 1000;
+
+async function getUsdToNgnRate() {
+  const now = Date.now();
+
+  if (cachedRate && now - cachedAt < ONE_HOUR) {
+    return cachedRate;
+  }
+
+  try {
+    const response = await axios.get(
+      "https://api.frankfurter.dev/v2/latest?base=USD&symbols=NGN"
+    );
+
+    cachedRate = response.data.rates.NGN;
+    cachedAt = now;
+
+    return cachedRate;
+  } catch (error) {
+    console.error("Exchange rate fetch failed:", error.message);
+
+    // Fallback rate if API fails (update manually if needed)
+    return cachedRate || 1600;
+  }
+}
 
 // ── GET COUNTRIES ─────────────────────────────
 const getCountries = async (req, res) => {
@@ -25,7 +54,7 @@ const getCountries = async (req, res) => {
   }
 };
 
-// ── GET PRODUCTS BY COUNTRY (all services + prices) ──
+// ── GET PRODUCTS BY COUNTRY (all services, NGN price) ──
 const getProducts = async (req, res) => {
   try {
     const { country } = req.params;
@@ -35,14 +64,18 @@ const getProducts = async (req, res) => {
       { headers: fivesimHeaders }
     );
 
-    // Add 50% markup to all prices
+    const usdToNgn = await getUsdToNgnRate();
+
     const products = response.data;
     const marked = {};
 
     Object.keys(products).forEach((service) => {
+      const usdPrice = products[service].Price;
+      const ngnPrice = usdPrice * usdToNgn * MARKUP;
+
       marked[service] = {
         ...products[service],
-        Price: +(products[service].Price * MARKUP).toFixed(2),
+        Price: Math.ceil(ngnPrice), // round up to nearest naira
       };
     });
 
@@ -68,7 +101,7 @@ const buySMS = async (req, res) => {
     const user = await User.findById(req.user._id);
     const smsCost = Number(price);
 
-    // Check user balance
+    // Check user balance (price is already in NGN at this point)
     if (user.balance < smsCost) {
       return res.status(400).json({
         message: "Insufficient balance",

@@ -196,7 +196,7 @@ export default function BuyNumberPage() {
         {/* ORDER RESULT */}
         {order ? (
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-[32px] p-6 md:p-10 shadow-2xl mb-10">
-            <h2 className="text-2xl font-bold mb-6 text-green-400">✅ Number Purchased!</h2>
+            <h2 className="text-2xl font-bold mb-6 text-green-400">Number Purchased!</h2>
             <div className="space-y-3 text-lg">
               <p><span className="text-gray-400">Phone Number:</span> <span className="font-bold text-blue-400">{order.phone}</span></p>
               <p><span className="text-gray-400">Service:</span> {order.service}</p>
@@ -207,7 +207,7 @@ export default function BuyNumberPage() {
             {/* SMS RESULT */}
             {sms?.sms && sms.sms.length > 0 && (
               <div className="mt-6 bg-green-600/20 border border-green-600 rounded-2xl p-5">
-                <h3 className="text-green-400 font-bold text-xl mb-2">📩 SMS Received!</h3>
+                <h3 className="text-green-400 font-bold text-xl mb-2">SMS Received!</h3>
                 <p className="text-2xl font-bold">{sms.sms[0].code}</p>
                 <p className="text-gray-400 text-sm mt-1">{sms.sms[0].text}</p>
               </div>
@@ -239,19 +239,16 @@ export default function BuyNumberPage() {
 
               {/* COUNTRY */}
               <div>
-                <label
-  htmlFor="country"
-  className="block mb-3 text-lg font-semibold"
->
-  Select Country
-</label>
+                <label htmlFor="country" className="block mb-3 text-lg font-semibold">
+                  Select Country
+                </label>
 
-<select
-  id="country"
-  value={country}
-  onChange={(e) => setCountry(e.target.value)}
-  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500"
->
+                <select
+                  id="country"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500"
+                >
                   <option value="">Choose country</option>
                   {Object.keys(countries).map((c) => (
                     <option key={c} value={c}>
@@ -263,20 +260,17 @@ export default function BuyNumberPage() {
 
               {/* SERVICE */}
               <div>
-                <label
-  htmlFor="service"
-  className="block mb-3 text-lg font-semibold"
->
-  Select Service
-</label>
+                <label htmlFor="service" className="block mb-3 text-lg font-semibold">
+                  Select Service
+                </label>
 
-<select
-  id="service"
-  value={service}
-  onChange={(e) => setService(e.target.value)}
-  disabled={!country}
-  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500 disabled:opacity-50"
->
+                <select
+                  id="service"
+                  value={service}
+                  onChange={(e) => setService(e.target.value)}
+                  disabled={!country}
+                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500 disabled:opacity-50"
+                >
                   <option value="">Choose service</option>
                   {Object.keys(services).map((s) => (
                     <option key={s} value={s}>{s}</option>

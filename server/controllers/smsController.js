@@ -5,14 +5,16 @@ const axios = require("axios");
 const FIVESIM_API = "https://5sim.net/v1";
 const MARKUP = 1.5; // 50% markup
 
+const fivesimHeaders = {
+  Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
+  Accept: "application/json",
+};
+
 // ── GET COUNTRIES ─────────────────────────────
 const getCountries = async (req, res) => {
   try {
     const response = await axios.get(`${FIVESIM_API}/guest/countries`, {
-      headers: {
-        Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
-        Accept: "application/json",
-      },
+      headers: fivesimHeaders,
     });
 
     res.status(200).json(response.data);
@@ -28,12 +30,7 @@ const getProducts = async (req, res) => {
 
     const response = await axios.get(
       `${FIVESIM_API}/guest/products/${country}/${service}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
-          Accept: "application/json",
-        },
-      }
+      { headers: fivesimHeaders }
     );
 
     // Add 50% markup to all prices
@@ -60,12 +57,7 @@ const getServices = async (req, res) => {
 
     const response = await axios.get(
       `${FIVESIM_API}/guest/products/${country}/any`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
-          Accept: "application/json",
-        },
-      }
+      { headers: fivesimHeaders }
     );
 
     res.status(200).json(response.data);
@@ -74,7 +66,7 @@ const getServices = async (req, res) => {
   }
 };
 
-// ── BUY NUMBER ────────────────────────────────
+// ── BUY NUMBER ─────────────────────────────────
 const buySMS = async (req, res) => {
   try {
     const { country, service, price } = req.body;
@@ -98,12 +90,7 @@ const buySMS = async (req, res) => {
     // Buy number from 5sim
     const fivesimResponse = await axios.get(
       `${FIVESIM_API}/user/buy/activation/${country}/any/${service}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
-          Accept: "application/json",
-        },
-      }
+      { headers: fivesimHeaders }
     );
 
     const order = fivesimResponse.data;
@@ -136,23 +123,20 @@ const buySMS = async (req, res) => {
     });
   } catch (error) {
     console.error("5sim error:", error?.response?.data || error.message);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: error?.response?.data?.message || error.message,
+    });
   }
 };
 
-// ── CHECK SMS ─────────────────────────────────
+// ── CHECK SMS ──────────────────────────────────
 const checkSMS = async (req, res) => {
   try {
     const { orderId } = req.params;
 
     const response = await axios.get(
       `${FIVESIM_API}/user/check/${orderId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
-          Accept: "application/json",
-        },
-      }
+      { headers: fivesimHeaders }
     );
 
     res.status(200).json(response.data);
@@ -161,19 +145,14 @@ const checkSMS = async (req, res) => {
   }
 };
 
-// ── CANCEL ORDER ──────────────────────────────
+// ── CANCEL ORDER ───────────────────────────────
 const cancelOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
 
-    const response = await axios.get(
+    await axios.get(
       `${FIVESIM_API}/user/cancel/${orderId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
-          Accept: "application/json",
-        },
-      }
+      { headers: fivesimHeaders }
     );
 
     // Refund user

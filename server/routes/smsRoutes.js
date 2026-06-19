@@ -1,7 +1,6 @@
 const express = require("express");
 const {
   getCountries,
-  getServices,
   getProducts,
   buySMS,
   checkSMS,
@@ -13,8 +12,7 @@ const router = express.Router();
 
 // Guest routes — no login needed
 router.get("/countries", getCountries);
-router.get("/services/:country", getServices);
-router.get("/products/:country/:service", getProducts);
+router.get("/products/:country", getProducts);
 
 // Protected routes — login required
 router.post("/buy", protect, buySMS);

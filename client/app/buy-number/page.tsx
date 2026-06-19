@@ -51,38 +51,31 @@ export default function BuyNumberPage() {
     fetchCountries();
   }, []);
 
-  // Fetch services when country changes
+  // Fetch products (services + prices) when country changes
   useEffect(() => {
     if (!country) return;
     setService("");
     setPrice(null);
-    async function fetchServices() {
+    async function fetchProducts() {
       try {
-        const res = await API.get(`/sms/services/${country}`);
+        const res = await API.get(`/sms/products/${country}`);
         setServices(res.data);
       } catch (error) {
         console.log(error);
+        setServices({});
       }
     }
-    fetchServices();
+    fetchProducts();
   }, [country]);
 
-  // Fetch price when service changes
+  // Set price when service changes (price already included in products response)
   useEffect(() => {
-    if (!country || !service) return;
-    async function fetchPrice() {
-      try {
-        const res = await API.get(`/sms/products/${country}/${service}`);
-        const operators = Object.values(res.data) as any[];
-        if (operators.length > 0) {
-          setPrice(operators[0].Price);
-        }
-      } catch (error) {
-        console.log(error);
-      }
+    if (!service || !services[service]) {
+      setPrice(null);
+      return;
     }
-    fetchPrice();
-  }, [country, service]);
+    setPrice(services[service].Price);
+  }, [service, services]);
 
   // Buy number
   async function handleBuyNumber() {
@@ -272,9 +265,13 @@ export default function BuyNumberPage() {
                   className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500 disabled:opacity-50"
                 >
                   <option value="">Choose service</option>
-                  {Object.keys(services).map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
+                  {Object.keys(services)
+                    .filter((s) => services[s]?.Qty > 0)
+                    .map((s) => (
+                      <option key={s} value={s}>
+                        {s} — ₦{services[s].Price?.toLocaleString()}
+                      </option>
+                    ))}
                 </select>
               </div>
 

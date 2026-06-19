@@ -19,39 +19,14 @@ const getCountries = async (req, res) => {
 
     res.status(200).json(response.data);
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// ── GET PRODUCTS BY COUNTRY AND SERVICE ───────
-const getProducts = async (req, res) => {
-  try {
-    const { country, service } = req.params;
-
-    const response = await axios.get(
-      `${FIVESIM_API}/guest/products/${country}/${service}`,
-      { headers: fivesimHeaders }
-    );
-
-    // Add 50% markup to all prices
-    const products = response.data;
-    const marked = {};
-
-    Object.keys(products).forEach((operator) => {
-      marked[operator] = {
-        ...products[operator],
-        Price: +(products[operator].Price * MARKUP).toFixed(2),
-      };
+    res.status(500).json({
+      message: error?.response?.data?.message || error.message,
     });
-
-    res.status(200).json(marked);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
   }
 };
 
-// ── GET SERVICES BY COUNTRY ───────────────────
-const getServices = async (req, res) => {
+// ── GET PRODUCTS BY COUNTRY (all services + prices) ──
+const getProducts = async (req, res) => {
   try {
     const { country } = req.params;
 
@@ -60,9 +35,22 @@ const getServices = async (req, res) => {
       { headers: fivesimHeaders }
     );
 
-    res.status(200).json(response.data);
+    // Add 50% markup to all prices
+    const products = response.data;
+    const marked = {};
+
+    Object.keys(products).forEach((service) => {
+      marked[service] = {
+        ...products[service],
+        Price: +(products[service].Price * MARKUP).toFixed(2),
+      };
+    });
+
+    res.status(200).json(marked);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: error?.response?.data?.message || error.message,
+    });
   }
 };
 
@@ -141,7 +129,9 @@ const checkSMS = async (req, res) => {
 
     res.status(200).json(response.data);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: error?.response?.data?.message || error.message,
+    });
   }
 };
 
@@ -171,13 +161,14 @@ const cancelOrder = async (req, res) => {
       balance: user.balance,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: error?.response?.data?.message || error.message,
+    });
   }
 };
 
 module.exports = {
   getCountries,
-  getServices,
   getProducts,
   buySMS,
   checkSMS,

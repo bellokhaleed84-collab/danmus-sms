@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
-const passport = require("./config/passport"); // ← ADD THIS
+const session = require("express-session");
+const passport = require("./config/passport");
 
 const authRoutes = require("./routes/authRoutes");
 const walletRoutes = require("./routes/walletRoutes");
@@ -16,7 +17,16 @@ app.options(/.*/, cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(passport.initialize()); // ← ADD THIS
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
+app.use(passport.initialize());
 
 app.get("/", (req, res) => {
   res.json({ status: "Backend is running" });

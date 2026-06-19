@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import API from "@/lib/api";
 import { useRouter } from "next/navigation";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 export default function RegisterPage() {
 
@@ -284,8 +285,15 @@ export default function RegisterPage() {
 
           </form>
 
-          <p className="text-center text-gray-300 mt-8 text-sm sm:text-base">
+          <div className="flex items-center gap-4 my-6">
+            <div className="flex-1 h-px bg-white/20" />
+            <span className="text-gray-300 text-sm">OR</span>
+            <div className="flex-1 h-px bg-white/20" />
+          </div>
 
+          <GoogleAuthButton />
+
+          <p className="text-center text-gray-300 mt-8 text-sm sm:text-base">
             Already have an account?{" "}
 
             <Link

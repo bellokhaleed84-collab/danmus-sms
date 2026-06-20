@@ -12,7 +12,25 @@ const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
-app.use(cors());
+// ── CORS — restricted to known origins ────────
+const allowedOrigins = [
+  "https://danmus-sms-ynmz.vercel.app",
+  "http://localhost:3000",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS: " + origin));
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.options(/.*/, cors());
 
 app.use(express.json());

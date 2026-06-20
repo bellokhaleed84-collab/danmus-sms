@@ -20,6 +20,11 @@ export default function AdminPage() {
   });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [balanceUserId, setBalanceUserId] = useState<string | null>(null);
+  const [balanceAmount, setBalanceAmount] = useState("");
+  const [balanceType, setBalanceType] = useState("add");
+  const [balanceDesc, setBalanceDesc] = useState("");
+  const [balanceLoading, setBalanceLoading] = useState(false);
 
   useEffect(() => {
     async function loadAdmin() {
@@ -77,6 +82,33 @@ export default function AdminPage() {
     setActionLoading(null);
   }
 
+  async function handleAdjustBalance() {
+    if (!balanceUserId || !balanceAmount) {
+      alert("Please enter an amount");
+      return;
+    }
+    const token = localStorage.getItem("token");
+    setBalanceLoading(true);
+    try {
+      const response = await API.patch(
+        `/admin/users/${balanceUserId}/balance`,
+        { amount: balanceAmount, type: balanceType, description: balanceDesc },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setUsers((prev) => prev.map((u) =>
+        u._id === balanceUserId ? { ...u, balance: response.data.balance } : u
+      ));
+      alert(response.data.message);
+      setBalanceUserId(null);
+      setBalanceAmount("");
+      setBalanceDesc("");
+      setBalanceType("add");
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Failed to adjust balance");
+    }
+    setBalanceLoading(false);
+  }
+
   const filteredUsers = users.filter(
     (u) =>
       u.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -105,6 +137,77 @@ export default function AdminPage() {
         <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/20 blur-[120px] rounded-full" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 blur-[120px] rounded-full" />
       </div>
+
+      {/* BALANCE MODAL */}
+      {balanceUserId && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <h2 className="text-2xl font-bold mb-6">Adjust Wallet Balance</h2>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block mb-2 font-medium">Type</label>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setBalanceType("add")}
+                    className={`flex-1 py-3 rounded-2xl font-semibold transition ${
+                      balanceType === "add" ? "bg-green-600" : "bg-[var(--input)] border border-[var(--border)]"
+                    }`}
+                  >
+                    Add Balance
+                  </button>
+                  <button
+                    onClick={() => setBalanceType("deduct")}
+                    className={`flex-1 py-3 rounded-2xl font-semibold transition ${
+                      balanceType === "deduct" ? "bg-red-600" : "bg-[var(--input)] border border-[var(--border)]"
+                    }`}
+                  >
+                    Deduct Balance
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block mb-2 font-medium">Amount (₦)</label>
+                <input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={balanceAmount}
+                  onChange={(e) => setBalanceAmount(e.target.value)}
+                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-2 font-medium">Description (optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Bonus credit"
+                  value={balanceDesc}
+                  onChange={(e) => setBalanceDesc(e.target.value)}
+                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={handleAdjustBalance}
+                  disabled={balanceLoading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 py-4 rounded-2xl font-bold transition"
+                >
+                  {balanceLoading ? "Updating..." : "Confirm"}
+                </button>
+                <button
+                  onClick={() => { setBalanceUserId(null); setBalanceAmount(""); setBalanceDesc(""); }}
+                  className="flex-1 bg-[var(--input)] border border-[var(--border)] py-4 rounded-2xl font-bold transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
@@ -200,6 +303,9 @@ export default function AdminPage() {
                     <p className="text-gray-500 text-xs mt-1">
                       Joined: {new Date(user.createdAt).toLocaleDateString()}
                     </p>
+                    <p className="text-green-400 text-sm font-semibold mt-1">
+                      Balance: ₦{Number(user.balance || 0).toLocaleString()}
+                    </p>
                   </div>
                 </div>
 
@@ -213,7 +319,13 @@ export default function AdminPage() {
                   </div>
 
                   {user.role !== "admin" && (
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 flex-wrap">
+                      <button
+                        onClick={() => setBalanceUserId(user._id)}
+                        className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-2xl text-sm font-semibold transition"
+                      >
+                        Adjust Balance
+                      </button>
                       <button
                         onClick={() => handleBan(user._id)}
                         disabled={actionLoading === user._id + "-ban"}

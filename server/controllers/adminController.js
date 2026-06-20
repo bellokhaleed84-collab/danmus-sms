@@ -100,6 +100,54 @@ const getAllTransactions = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// ── ADJUST USER BALANCE ───────────────────────
+const adjustUserBalance = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { amount, type, description } = req.body;
+
+    if (!amount || isNaN(amount)) {
+      return res.status(400).json({ message: "Valid amount is required" });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const numAmount = Number(amount);
+
+    if (type === "deduct" && user.balance < numAmount) {
+      return res.status(400).json({ message: "User has insufficient balance" });
+    }
+
+    // Add or deduct
+    if (type === "deduct") {
+      user.balance -= numAmount;
+    } else {
+      user.balance += numAmount;
+    }
+
+    await user.save();
+
+    // Save transaction
+    await Transaction.create({
+      user: user._id,
+      type: "deposit",
+      amount: numAmount,
+      status: "successful",
+      description: description || `Admin ${type === "deduct" ? "deduction" : "top-up"}`,
+    });
+
+    res.status(200).json({
+      message: `Balance ${type === "deduct" ? "deducted" : "added"} successfully`,
+      balance: user.balance,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 module.exports = {
   getAllUsers,
@@ -107,4 +155,5 @@ module.exports = {
   deleteUser,
   banUser,
   getAllTransactions,
+  adjustUserBalance,
 };

@@ -1,7 +1,6 @@
 const express = require("express");
 const passport = require("passport");
 const jwt = require("jsonwebtoken");
-
 const {
   registerUser,
   loginUser,
@@ -10,14 +9,18 @@ const {
   resetPassword,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
+const {
+  authLimiter,
+  forgotPasswordLimiter,
+} = require("../middleware/rateLimiter");
 
 const router = express.Router();
 
-router.post("/register", registerUser);
-router.post("/login", loginUser);
+router.post("/register", authLimiter, registerUser);
+router.post("/login", authLimiter, loginUser);
 router.get("/me", protect, getMe);
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);
+router.post("/reset-password", authLimiter, resetPassword);
 
 // ── GOOGLE OAUTH ──────────────────────────────
 router.get(
@@ -32,17 +35,13 @@ router.get(
     failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_failed`,
   }),
   (req, res) => {
-
     const user = req.user;
-
     const token = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
-
     const redirectUrl = `${process.env.FRONTEND_URL}/auth/google/success?token=${token}&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&id=${user._id}`;
-
     res.redirect(redirectUrl);
   }
 );

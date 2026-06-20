@@ -9,6 +9,7 @@ const smsRoutes = require("./routes/smsRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const { generalLimiter } = require("./middleware/rateLimiter");
 
 const app = express();
 
@@ -45,6 +46,9 @@ app.use(
 );
 
 app.use(passport.initialize());
+
+// ── Rate limiting (after CORS so error responses still carry CORS headers) ──
+app.use("/api", generalLimiter);
 
 app.get("/", (req, res) => {
   res.json({ status: "Backend is running" });

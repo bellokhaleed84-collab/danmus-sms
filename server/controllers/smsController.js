@@ -3,7 +3,7 @@ const Transaction = require("../models/Transaction");
 const axios = require("axios");
 
 const FIVESIM_API = "https://5sim.net/v1";
-const MARKUP = 1.5; // 50% markup on top of converted NGN price
+const MARKUP = 1.75; // 75% markup on top of converted NGN price
 
 const fivesimHeaders = {
   Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,

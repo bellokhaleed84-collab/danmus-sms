@@ -104,6 +104,7 @@ export default function BuyNumberPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       setOrder(data.order);
+      setSms(null);
       setBalance(data.balance);
     } catch (error: any) {
       alert(error.message || "Failed to buy number");
@@ -113,18 +114,30 @@ export default function BuyNumberPage() {
   }
 
   // Check SMS
-  async function handleCheckSMS() {
+  async function handleCheckSMS(silent = false) {
     if (!order) return;
-    setChecking(true);
+    if (!silent) setChecking(true);
     try {
       const res = await API.get(`/sms/check/${order.id}`);
       setSms(res.data);
     } catch (error: any) {
-      alert("Failed to check SMS");
+      if (!silent) alert("Failed to check SMS. Please try again.");
     } finally {
-      setChecking(false);
+      if (!silent) setChecking(false);
     }
   }
+
+  // Auto-poll for SMS every 5 seconds while waiting
+  useEffect(() => {
+    if (!order) return;
+    if (sms?.sms && sms.sms.length > 0) return; // stop polling once received
+
+    const interval = setInterval(() => {
+      handleCheckSMS(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [order, sms]);
 
   // Cancel order
   async function handleCancel() {
@@ -198,21 +211,28 @@ export default function BuyNumberPage() {
             </div>
 
             {/* SMS RESULT */}
-            {sms?.sms && sms.sms.length > 0 && (
+            {sms?.sms && sms.sms.length > 0 ? (
               <div className="mt-6 bg-green-600/20 border border-green-600 rounded-2xl p-5">
                 <h3 className="text-green-400 font-bold text-xl mb-2">SMS Received!</h3>
                 <p className="text-2xl font-bold">{sms.sms[0].code}</p>
                 <p className="text-gray-400 text-sm mt-1">{sms.sms[0].text}</p>
               </div>
+            ) : (
+              <div className="mt-6 bg-yellow-600/20 border border-yellow-600 rounded-2xl p-5 flex items-center gap-3">
+                <div className="w-5 h-5 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                <p className="text-yellow-400 font-medium">
+                  Waiting for SMS... we&apos;ll check automatically every few seconds
+                </p>
+              </div>
             )}
 
             <div className="flex gap-4 mt-8">
               <button
-                onClick={handleCheckSMS}
+                onClick={() => handleCheckSMS(false)}
                 disabled={checking}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 py-4 rounded-2xl font-bold transition"
               >
-                {checking ? "Checking..." : "Check SMS"}
+                {checking ? "Checking..." : "Check SMS Now"}
               </button>
               <button
                 onClick={handleCancel}

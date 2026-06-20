@@ -88,10 +88,23 @@ const banUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// ── GET ALL TRANSACTIONS ──────────────────────
+const getAllTransactions = async (req, res) => {
+  try {
+    const transactions = await Transaction.find()
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(transactions);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 module.exports = {
   getAllUsers,
   getPlatformStats,
   deleteUser,
   banUser,
+  getAllTransactions,
 };

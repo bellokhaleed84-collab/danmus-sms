@@ -5,6 +5,7 @@ const {
   getPlatformStats,
   deleteUser,
   banUser,
+  getAllTransactions,
 } = require("../controllers/adminController");
 const { protect } = require("../middleware/authMiddleware");
 
@@ -21,5 +22,6 @@ router.get("/users", protect, adminOnly, getAllUsers);
 router.get("/stats", protect, adminOnly, getPlatformStats);
 router.delete("/users/:userId", protect, adminOnly, deleteUser);
 router.patch("/users/:userId/ban", protect, adminOnly, banUser);
+router.get("/transactions", protect, adminOnly, getAllTransactions);
 
 module.exports = router;

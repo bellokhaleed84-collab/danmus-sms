@@ -10,6 +10,8 @@ export default function AdminPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [txFilter, setTxFilter] = useState("all");
   const [adminEmail, setAdminEmail] = useState("");
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -27,12 +29,14 @@ export default function AdminPage() {
       if (user.role !== "admin") { router.push("/dashboard"); return; }
       setAdminEmail(user.email);
       try {
-        const [usersRes, statsRes] = await Promise.all([
+        const [usersRes, statsRes, txRes] = await Promise.all([
           API.get("/admin/users", { headers: { Authorization: `Bearer ${token}` } }),
           API.get("/admin/stats", { headers: { Authorization: `Bearer ${token}` } }),
+          API.get("/admin/transactions", { headers: { Authorization: `Bearer ${token}` } }),
         ]);
         setUsers(usersRes.data);
         setStats(statsRes.data);
+        setTransactions(txRes.data);
       } catch (error) {
         console.log(error);
       }
@@ -79,6 +83,10 @@ export default function AdminPage() {
       u.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const filteredTransactions = transactions.filter(
+    (t) => txFilter === "all" || t.type === txFilter
+  );
+
   if (loading) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -100,6 +108,7 @@ export default function AdminPage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
+        {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
           <div>
             <h1 className="text-2xl md:text-5xl font-bold">Admin Dashboard</h1>
@@ -120,12 +129,14 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* ADMIN ACCESS */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-2xl mb-10">
           <h2 className="text-2xl md:text-3xl font-bold mb-4">Admin Access</h2>
           <p className="text-gray-400 text-lg">Logged in as:</p>
           <p className="text-blue-500 font-bold text-2xl mt-2">{adminEmail}</p>
         </div>
 
+        {/* STATS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
             <p className="text-gray-400">Total Users</p>
@@ -147,6 +158,7 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* USERS */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-2xl">
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-8">
@@ -220,6 +232,74 @@ export default function AdminPage() {
                       </button>
                     </div>
                   )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+
+        {/* TRANSACTIONS */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-2xl mt-10">
+
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold">All Transactions</h2>
+            <div className="flex gap-3 flex-wrap">
+              {["all", "deposit", "sms_purchase"].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setTxFilter(f)}
+                  className={`px-4 py-2 rounded-2xl text-sm font-semibold transition ${
+                    txFilter === f
+                      ? "bg-blue-600 text-white"
+                      : "bg-[var(--input)] border border-[var(--border)]"
+                  }`}
+                >
+                  {f === "all" ? "All" : f === "deposit" ? "Deposits" : "SMS Purchases"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredTransactions.length === 0 && (
+            <div className="text-center text-gray-400 py-10">
+              No transactions found
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {filteredTransactions.map((tx) => (
+              <div
+                key={tx._id}
+                className="bg-[var(--input)] border border-[var(--border)] rounded-2xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+              >
+                <div>
+                  <p className="font-bold text-lg">{tx.description || tx.type}</p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    {tx.user?.name} — {tx.user?.email}
+                  </p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    {new Date(tx.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex flex-col md:items-end gap-2">
+                  <p className={`text-xl font-bold ${
+                    tx.type === "deposit" ? "text-green-500" : "text-blue-500"
+                  }`}>
+                    {tx.type === "deposit" ? "+" : "-"}₦{Number(tx.amount).toLocaleString()}
+                  </p>
+                  <div className={`px-3 py-1 rounded-xl text-xs font-semibold ${
+                    tx.status === "successful"
+                      ? "bg-green-500/20 text-green-500"
+                      : tx.status === "pending"
+                      ? "bg-yellow-500/20 text-yellow-500"
+                      : "bg-red-500/20 text-red-500"
+                  }`}>
+                    {tx.status}
+                  </div>
+                  <div className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-xl text-xs font-semibold">
+                    {tx.type === "deposit" ? "Deposit" : "SMS Purchase"}
+                  </div>
                 </div>
               </div>
             ))}

@@ -6,25 +6,20 @@ const fundWallet = async (req, res) => {
   try {
     const { amount } = req.body;
 
-    // Validate amount
     if (!amount || isNaN(amount)) {
       return res.status(400).json({
         message: "Please enter a valid amount",
       });
     }
 
-    // Find logged in user
     const user = await User.findById(req.user._id);
 
-    // Convert amount to number
     const fundAmount = Number(amount);
 
-    // Update balance
     user.balance += fundAmount;
 
     await user.save();
 
-    // Save transaction
     const transaction = await Transaction.create({
       user: user._id,
       type: "deposit",

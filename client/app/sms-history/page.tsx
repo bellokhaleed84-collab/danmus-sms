@@ -6,29 +6,32 @@ import MobileNav from "@/components/MobileNav";
 import API from "@/lib/api";
 
 export default function SmsHistoryPage() {
-  const [smsHistory, setSmsHistory] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchSmsHistory() {
+    async function fetchHistory() {
       const token = localStorage.getItem("token");
       if (!token) { setLoading(false); return; }
       try {
-        const response = await API.get("/sms/history", {
+        const response = await API.get("/wallet/transactions", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setSmsHistory(response.data || []);
+        const smsOnly = (response.data || []).filter(
+          (t: any) => t.type === "sms_purchase"
+        );
+        setTransactions(smsOnly);
       } catch (error) {
         console.log(error);
       }
       setLoading(false);
     }
-    fetchSmsHistory();
+    fetchHistory();
   }, []);
 
-  const totalOrders = smsHistory.length;
-  const completedOrders = smsHistory.filter((s) => s.status === "Completed").length;
-  const pendingOrders = smsHistory.filter((s) => s.status === "Pending").length;
+  const totalOrders = transactions.length;
+  const completedOrders = transactions.filter((t) => t.status === "successful").length;
+  const pendingOrders = transactions.filter((t) => t.status === "pending").length;
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all duration-300 pb-28 md:pb-0 overflow-x-hidden">
@@ -65,35 +68,37 @@ export default function SmsHistoryPage() {
 
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-[28px] md:rounded-[32px] shadow-2xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
+            <table className="w-full min-w-[700px]">
               <thead className="bg-[var(--input)]">
                 <tr>
-                  {["Service", "Country", "Number", "OTP", "Status", "Date"].map((h) => (
+                  {["Description", "Amount", "Status", "Date"].map((h) => (
                     <th key={h} className="text-left p-5 md:p-6">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="p-10 text-center text-gray-400">Loading...</td></tr>
-                ) : smsHistory.length === 0 ? (
-                  <tr><td colSpan={6} className="p-10 text-center text-gray-400">No SMS history yet</td></tr>
+                  <tr><td colSpan={4} className="p-10 text-center text-gray-400">Loading...</td></tr>
+                ) : transactions.length === 0 ? (
+                  <tr><td colSpan={4} className="p-10 text-center text-gray-400">No SMS history yet</td></tr>
                 ) : (
-                  smsHistory.map((sms) => (
-                    <tr key={sms.id} className="border-t border-[var(--border)] hover:bg-[var(--input)] transition">
-                      <td className="p-5 md:p-6 font-semibold">{sms.service}</td>
-                      <td className="p-5 md:p-6">{sms.country}</td>
-                      <td className="p-5 md:p-6">{sms.number}</td>
-                      <td className="p-5 md:p-6 font-bold tracking-widest">{sms.otp}</td>
+                  transactions.map((tx) => (
+                    <tr key={tx._id} className="border-t border-[var(--border)] hover:bg-[var(--input)] transition">
+                      <td className="p-5 md:p-6 font-semibold">{tx.description}</td>
+                      <td className="p-5 md:p-6 font-bold text-red-400">
+                        ₦{Number(tx.amount).toLocaleString()}
+                      </td>
                       <td className="p-5 md:p-6">
                         <span className={`px-4 py-2 rounded-xl text-sm font-semibold ${
-                          sms.status === "Completed" ? "bg-green-500/20 text-green-500" :
-                          sms.status === "Pending" ? "bg-yellow-500/20 text-yellow-500" :
+                          tx.status === "successful" ? "bg-green-500/20 text-green-500" :
+                          tx.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
                           "bg-red-500/20 text-red-500"}`}>
-                          {sms.status}
+                          {tx.status}
                         </span>
                       </td>
-                      <td className="p-5 md:p-6 text-gray-400">{new Date(sms.created_at).toLocaleDateString()}</td>
+                      <td className="p-5 md:p-6 text-gray-400">
+                        {new Date(tx.createdAt).toLocaleDateString()}
+                      </td>
                     </tr>
                   ))
                 )}

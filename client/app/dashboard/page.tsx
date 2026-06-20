@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import MobileNav from "@/components/MobileNav";
 import { useRouter } from "next/navigation";
+import API from "@/lib/api";
 
 export default function DashboardPage() {
 
   const router = useRouter();
 
   const [balance, setBalance] = useState(0);
-
   const [username, setUsername] = useState("User");
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(true);
 
   /* FETCH USER DATA */
   useEffect(() => {
@@ -58,8 +60,6 @@ export default function DashboardPage() {
 
         const data = await response.json();
 
-        console.log(data);
-
         if (!response.ok) {
 
           /* DON'T LOGOUT ON 401 — JUST USE CACHED DATA */
@@ -84,6 +84,55 @@ export default function DashboardPage() {
     fetchUserData();
 
   }, [router]);
+
+  /* FETCH RECENT TRANSACTIONS */
+  useEffect(() => {
+
+    async function fetchTransactions() {
+
+      try {
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          setLoadingActivity(false);
+          return;
+        }
+
+        const response = await API.get("/wallet/transactions", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setTransactions(response.data || []);
+
+      } catch (error) {
+
+        console.log(error);
+
+      } finally {
+
+        setLoadingActivity(false);
+      }
+    }
+
+    fetchTransactions();
+
+  }, []);
+
+  /* STATS FROM REAL DATA */
+  const smsTransactions = transactions.filter((t) => t.type === "sms_purchase");
+
+  const ordersCount = smsTransactions.length;
+
+  const completedCount = smsTransactions.filter(
+    (t) => t.status === "successful"
+  ).length;
+
+  const pendingCount = smsTransactions.filter(
+    (t) => t.status === "pending"
+  ).length;
+
+  const recentActivity = transactions.slice(0, 5);
 
   return (
 
@@ -262,7 +311,7 @@ export default function DashboardPage() {
               </p>
 
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-3 md:mt-4">
-                0
+                {ordersCount}
               </h3>
 
             </div>
@@ -274,7 +323,7 @@ export default function DashboardPage() {
               </p>
 
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-3 md:mt-4 text-green-500">
-                0
+                {completedCount}
               </h3>
 
             </div>
@@ -286,7 +335,7 @@ export default function DashboardPage() {
               </p>
 
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-3 md:mt-4 text-yellow-500">
-                0
+                {pendingCount}
               </h3>
 
             </div>
@@ -396,29 +445,86 @@ export default function DashboardPage() {
 
             </div>
 
-            <div className="space-y-5">
+            {loadingActivity ? (
 
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[var(--input)] rounded-2xl p-5">
+              <div className="bg-[var(--input)] rounded-2xl p-5 text-center">
+                <p className="text-gray-400">Loading...</p>
+              </div>
 
-                <div className="min-w-0">
+            ) : recentActivity.length === 0 ? (
 
-                  <h3 className="font-semibold">
-                    No Activity Yet
-                  </h3>
+              <div className="space-y-5">
 
-                  <p className="text-gray-400 text-sm mt-1 break-words leading-6">
-                    Your recent orders and wallet activities will appear here
-                  </p>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[var(--input)] rounded-2xl p-5">
+
+                  <div className="min-w-0">
+
+                    <h3 className="font-semibold">
+                      No Activity Yet
+                    </h3>
+
+                    <p className="text-gray-400 text-sm mt-1 break-words leading-6">
+                      Your recent orders and wallet activities will appear here
+                    </p>
+
+                  </div>
+
+                  <span className="bg-blue-500/20 text-blue-500 px-4 py-2 rounded-xl text-sm w-fit shrink-0">
+                    Empty
+                  </span>
 
                 </div>
 
-                <span className="bg-blue-500/20 text-blue-500 px-4 py-2 rounded-xl text-sm w-fit shrink-0">
-                  Empty
-                </span>
+              </div>
+
+            ) : (
+
+              <div className="space-y-5">
+
+                {recentActivity.map((tx) => (
+
+                  <div
+                    key={tx._id}
+                    className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[var(--input)] rounded-2xl p-5"
+                  >
+
+                    <div className="min-w-0">
+
+                      <h3 className="font-semibold">
+                        {tx.description || (tx.type === "deposit" ? "Wallet Funding" : "SMS Purchase")}
+                      </h3>
+
+                      <p className="text-gray-400 text-sm mt-1 break-words leading-6">
+                        {new Date(tx.createdAt).toLocaleString()}
+                      </p>
+
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+
+                      <span className={`font-bold ${
+                        tx.type === "deposit" ? "text-green-500" : "text-red-400"
+                      }`}>
+                        {tx.type === "deposit" ? "+" : "-"}₦{Number(tx.amount).toLocaleString()}
+                      </span>
+
+                      <span className={`px-4 py-2 rounded-xl text-sm w-fit ${
+                        tx.status === "successful" ? "bg-green-500/20 text-green-500" :
+                        tx.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
+                        "bg-red-500/20 text-red-500"
+                      }`}>
+                        {tx.status}
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                ))}
 
               </div>
 
-            </div>
+            )}
 
           </div>
 

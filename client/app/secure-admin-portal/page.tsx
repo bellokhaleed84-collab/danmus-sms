@@ -25,6 +25,7 @@ export default function AdminPage() {
   const [balanceType, setBalanceType] = useState("add");
   const [balanceDesc, setBalanceDesc] = useState("");
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [viewTxUser, setViewTxUser] = useState<any | null>(null);
 
   useEffect(() => {
     async function loadAdmin() {
@@ -119,6 +120,10 @@ export default function AdminPage() {
     (t) => txFilter === "all" || t.type === txFilter
   );
 
+  const userTransactions = viewTxUser
+    ? transactions.filter((t) => t.user?._id === viewTxUser._id)
+    : [];
+
   if (loading) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -143,7 +148,6 @@ export default function AdminPage() {
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 w-full max-w-md shadow-2xl">
             <h2 className="text-2xl font-bold mb-6">Adjust Wallet Balance</h2>
-
             <div className="space-y-5">
               <div>
                 <label className="block mb-2 font-medium">Type</label>
@@ -166,7 +170,6 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
-
               <div>
                 <label className="block mb-2 font-medium">Amount (₦)</label>
                 <input
@@ -177,7 +180,6 @@ export default function AdminPage() {
                   className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 outline-none focus:border-blue-500"
                 />
               </div>
-
               <div>
                 <label className="block mb-2 font-medium">Description (optional)</label>
                 <input
@@ -188,7 +190,6 @@ export default function AdminPage() {
                   className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 outline-none focus:border-blue-500"
                 />
               </div>
-
               <div className="flex gap-3 mt-4">
                 <button
                   onClick={handleAdjustBalance}
@@ -205,6 +206,73 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* USER TRANSACTIONS MODAL */}
+      {viewTxUser && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 w-full max-w-lg shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold">{viewTxUser.name}</h2>
+                <p className="text-gray-400 text-sm mt-1">{viewTxUser.email}</p>
+              </div>
+              <button
+                onClick={() => setViewTxUser(null)}
+                className="bg-[var(--input)] border border-[var(--border)] px-4 py-2 rounded-2xl font-semibold"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl p-4 mb-6">
+              <p className="text-gray-400 text-sm">Wallet Balance</p>
+              <p className="text-green-400 text-2xl font-bold mt-1">
+                ₦{Number(viewTxUser.balance || 0).toLocaleString()}
+              </p>
+            </div>
+
+            <h3 className="text-lg font-bold mb-4">Transaction History</h3>
+
+            {userTransactions.length === 0 ? (
+              <div className="text-center text-gray-400 py-10">
+                No transactions found for this user
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {userTransactions.map((tx) => (
+                  <div
+                    key={tx._id}
+                    className="bg-[var(--input)] border border-[var(--border)] rounded-2xl p-4 flex items-center justify-between gap-4"
+                  >
+                    <div>
+                      <p className="font-semibold">{tx.description || tx.type}</p>
+                      <p className="text-gray-500 text-xs mt-1">
+                        {new Date(tx.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <p className={`font-bold ${
+                        tx.type === "deposit" ? "text-green-500" : "text-blue-500"
+                      }`}>
+                        {tx.type === "deposit" ? "+" : "-"}₦{Number(tx.amount).toLocaleString()}
+                      </p>
+                      <div className={`px-2 py-1 rounded-lg text-xs font-semibold ${
+                        tx.status === "successful"
+                          ? "bg-green-500/20 text-green-500"
+                          : tx.status === "pending"
+                          ? "bg-yellow-500/20 text-yellow-500"
+                          : "bg-red-500/20 text-red-500"
+                      }`}>
+                        {tx.status}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -320,6 +388,12 @@ export default function AdminPage() {
 
                   {user.role !== "admin" && (
                     <div className="flex gap-3 flex-wrap">
+                      <button
+                        onClick={() => setViewTxUser(user)}
+                        className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-2xl text-sm font-semibold transition"
+                      >
+                        View Transactions
+                      </button>
                       <button
                         onClick={() => setBalanceUserId(user._id)}
                         className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-2xl text-sm font-semibold transition"

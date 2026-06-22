@@ -510,6 +510,95 @@ export default function SettingsPage() {
 
           </div>
 
+          {/* HELP & SUPPORT */}
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-8 shadow-xl">
+
+            <h2 className="text-2xl font-bold mb-8">
+              Help &amp; Support
+            </h2>
+
+            <div className="space-y-5">
+
+              {/* EMAIL SUPPORT */}
+              <a
+                href="mailto:danmussms@gmail.com"
+                className="bg-[var(--input)] border border-[var(--border)] rounded-2xl p-5 flex items-center gap-5 hover:border-blue-500 transition"
+              >
+
+                <div className="w-12 h-12 rounded-full bg-blue-600/20 flex items-center justify-center text-2xl shrink-0">
+                  📧
+                </div>
+
+                <div>
+
+                  <h3 className="font-semibold text-lg">
+                    Email Support
+                  </h3>
+
+                  <p className="text-gray-400 text-sm mt-1">
+                    danmussms@gmail.com
+                  </p>
+
+                </div>
+
+              </a>
+
+              {/* WHATSAPP SUPPORT */}
+              <a
+                href="https://whatsapp.com/channel/0029Vb8N0VeAojYsaAlNz83R"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-[var(--input)] border border-[var(--border)] rounded-2xl p-5 flex items-center gap-5 hover:border-green-500 transition"
+              >
+
+                <div className="w-12 h-12 rounded-full bg-green-600/20 flex items-center justify-center text-2xl shrink-0">
+                  💬
+                </div>
+
+                <div>
+
+                  <h3 className="font-semibold text-lg">
+                    WhatsApp Support
+                  </h3>
+
+                  <p className="text-gray-400 text-sm mt-1">
+                    Chat with us on WhatsApp
+                  </p>
+
+                </div>
+
+              </a>
+
+              {/* TELEGRAM SUPPORT */}
+              <a
+                href="https://t.me/Danmus_Sms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-[var(--input)] border border-[var(--border)] rounded-2xl p-5 flex items-center gap-5 hover:border-sky-500 transition"
+              >
+
+                <div className="w-12 h-12 rounded-full bg-sky-600/20 flex items-center justify-center text-2xl shrink-0">
+                  ✈️
+                </div>
+
+                <div>
+
+                  <h3 className="font-semibold text-lg">
+                    Telegram Support
+                  </h3>
+
+                  <p className="text-gray-400 text-sm mt-1">
+                    Message us on Telegram
+                  </p>
+
+                </div>
+
+              </a>
+
+            </div>
+
+          </div>
+
           {/* SECURITY */}
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-8 shadow-xl">
 
@@ -526,7 +615,7 @@ export default function SettingsPage() {
                 </p>
 
                 <p className="text-green-400 mt-2">
-                  Verified & Active
+                  Verified &amp; Active
                 </p>
 
               </div>

@@ -71,7 +71,7 @@ export default function HomePage() {
 
       <section
         className="min-h-screen bg-cover bg-center relative flex items-center justify-center px-4 md:px-6 pt-36 md:pt-20"
-        style={{ backgroundImage: "url('/bg.jpg')" }}
+       style={{ backgroundImage: "url('/bg.png')" }}
       >
 
         <div className="absolute inset-0 bg-black/70" />

@@ -9,6 +9,7 @@ const smsRoutes = require("./routes/smsRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const listingRoutes = require("./routes/listingRoutes");
 const { generalLimiter } = require("./middleware/rateLimiter");
 
 const app = express();
@@ -18,8 +19,6 @@ const allowedOrigins = [
   "https://danmus-sms-ynmz.vercel.app",
   "http://localhost:3000",
 ];
-const listingRoutes = require("./routes/listingRoutes");
-app.use("/api/listings", listingRoutes);
 
 app.use(
   cors({
@@ -62,5 +61,6 @@ app.use("/api/sms", smsRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/listings", listingRoutes);
 
 module.exports = app;

@@ -28,6 +28,12 @@ export default function MobileNav() {
     },
 
     {
+      name: "Market",
+      href: "/marketplace",
+      icon: "🛒",
+    },
+
+    {
       name: "History",
       href: "/sms-history",
       icon: "📩",
@@ -44,7 +50,7 @@ export default function MobileNav() {
 
     <div className="fixed bottom-0 left-0 w-full md:hidden z-50 px-4 pb-4">
 
-      <div className="bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl md:rounded-3xl flex items-center justify-between px-4 py-3 md:py-3 shadow-2xl">
+      <div className="bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl md:rounded-3xl flex items-center justify-between px-3 py-3 md:py-3 shadow-2xl">
 
         {navItems.map((item) => (
 
@@ -58,7 +64,7 @@ export default function MobileNav() {
             }`}
           >
 
-            <span className="text-xl">
+            <span className="text-lg">
               {item.icon}
             </span>
 

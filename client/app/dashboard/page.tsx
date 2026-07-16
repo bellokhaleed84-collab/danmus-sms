@@ -174,6 +174,14 @@ export default function DashboardPage() {
 
             </Link>
 
+            <Link href="/marketplace">
+
+              <div className="hover:bg-[var(--input)] px-5 py-4 rounded-2xl transition cursor-pointer">
+                Marketplace
+              </div>
+
+            </Link>
+
             <Link href="/wallet">
 
               <div className="hover:bg-[var(--input)] px-5 py-4 rounded-2xl transition cursor-pointer">
@@ -361,11 +369,11 @@ export default function DashboardPage() {
               Quick Actions
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
 
               <Link href="/buy-number">
 
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer h-full">
 
                   <div className="text-4xl md:text-5xl mb-4 md:mb-5">
                     📱
@@ -383,9 +391,29 @@ export default function DashboardPage() {
 
               </Link>
 
+              <Link href="/marketplace">
+
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer h-full">
+
+                  <div className="text-4xl md:text-5xl mb-4 md:mb-5">
+                    🛒
+                  </div>
+
+                  <h3 className="text-xl md:text-2xl font-bold">
+                    Marketplace
+                  </h3>
+
+                  <p className="text-gray-400 mt-3 text-sm md:text-base leading-7">
+                    Buy verified social media accounts
+                  </p>
+
+                </div>
+
+              </Link>
+
               <Link href="/wallet">
 
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer h-full">
 
                   <div className="text-4xl md:text-5xl mb-4 md:mb-5">
                     💳
@@ -405,7 +433,7 @@ export default function DashboardPage() {
 
               <Link href="/sms-history">
 
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer h-full">
 
                   <div className="text-4xl md:text-5xl mb-4 md:mb-5">
                     📩

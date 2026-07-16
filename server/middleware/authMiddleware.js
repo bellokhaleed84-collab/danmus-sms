@@ -14,21 +14,12 @@ const protect = async (req, res, next) => {
 
       token = req.headers.authorization.split(" ")[1];
 
-      console.log("TOKEN:");
-      console.log(token);
-
       const decoded = jwt.verify(
         token,
         process.env.JWT_SECRET
       );
 
-      console.log("DECODED:");
-      console.log(decoded);
-
       const user = await User.findById(decoded.id).select("-password");
-
-      console.log("USER:");
-      console.log(user);
 
       if (!user) {
         return res.status(401).json({
@@ -58,6 +49,17 @@ const protect = async (req, res, next) => {
   }
 };
 
+const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === "admin") {
+    next();
+  } else {
+    return res.status(403).json({
+      message: "Admin access required",
+    });
+  }
+};
+
 module.exports = {
   protect,
+  isAdmin,
 };

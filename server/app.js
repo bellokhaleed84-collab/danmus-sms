@@ -18,6 +18,8 @@ const allowedOrigins = [
   "https://danmus-sms-ynmz.vercel.app",
   "http://localhost:3000",
 ];
+const listingRoutes = require("./routes/listingRoutes");
+app.use("/api/listings", listingRoutes);
 
 app.use(
   cors({

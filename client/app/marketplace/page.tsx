@@ -39,11 +39,6 @@ export default function MarketplacePage() {
             <h1 className="text-2xl md:text-5xl font-bold">Marketplace</h1>
             <p className="text-gray-400 mt-3 text-lg">Buy verified social media accounts</p>
           </div>
-          <Link href="/marketplace/sell">
-            <button className="bg-blue-600 hover:bg-blue-700 px-4 md:px-6 py-3 rounded-2xl font-semibold transition shadow-xl">
-              Sell an Account
-            </button>
-          </Link>
         </div>
 
         {/* FILTER */}

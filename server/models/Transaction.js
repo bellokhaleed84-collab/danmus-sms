@@ -10,7 +10,7 @@ const transactionSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["deposit", "sms_purchase"],
+      enum: ["deposit", "sms_purchase", "marketplace_purchase"],
       required: true,
     },
 
@@ -31,6 +31,23 @@ const transactionSchema = new mongoose.Schema(
 
     paymentReference: {
       type: String,
+    },
+
+    // ── STRUCTURED DETAILS (optional — populated going forward) ──
+    phone: {
+      type: String, // SMS purchases: the virtual number issued
+    },
+
+    country: {
+      type: String, // SMS purchases: country of the number
+    },
+
+    service: {
+      type: String, // SMS purchases: e.g. "whatsapp", "telegram"
+    },
+
+    platform: {
+      type: String, // Marketplace purchases: e.g. "instagram", "tiktok"
     },
   },
   {

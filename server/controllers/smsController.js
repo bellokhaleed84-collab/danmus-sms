@@ -128,6 +128,9 @@ const buySMS = async (req, res) => {
       status: "successful",
       description: `Virtual number for ${service} in ${country}`,
       paymentReference: String(order.id),
+      phone: order.phone,
+      country: order.country,
+      service: order.product,
     });
 
     res.status(200).json({

@@ -679,7 +679,7 @@ export default function AdminPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-8">
             <h2 className="text-2xl md:text-3xl font-bold">All Transactions</h2>
             <div className="flex gap-3 flex-wrap">
-              {["all", "deposit", "sms_purchase"].map((f) => (
+              {["all", "deposit", "sms_purchase", "marketplace_purchase"].map((f) => (
                 <button
                   key={f}
                   onClick={() => setTxFilter(f)}
@@ -689,7 +689,13 @@ export default function AdminPage() {
                       : "bg-[var(--input)] border border-[var(--border)]"
                   }`}
                 >
-                  {f === "all" ? "All" : f === "deposit" ? "Deposits" : "SMS Purchases"}
+                  {f === "all"
+                    ? "All"
+                    : f === "deposit"
+                    ? "Deposits"
+                    : f === "sms_purchase"
+                    ? "SMS Purchases"
+                    : "Marketplace"}
                 </button>
               ))}
             </div>
@@ -732,7 +738,11 @@ export default function AdminPage() {
                     {tx.status}
                   </div>
                   <div className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-xl text-xs font-semibold">
-                    {tx.type === "deposit" ? "Deposit" : "SMS Purchase"}
+                    {tx.type === "deposit"
+                      ? "Deposit"
+                      : tx.type === "sms_purchase"
+                      ? "SMS Purchase"
+                      : "Marketplace"}
                   </div>
                 </div>
               </div>

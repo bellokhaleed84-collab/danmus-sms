@@ -5,6 +5,25 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import MobileNav from "@/components/MobileNav";
 import API from "@/lib/api";
+import {
+  FaInstagram,
+  FaFacebook,
+  FaTiktok,
+  FaXTwitter,
+  FaTelegram,
+  FaWhatsapp,
+  FaLink,
+} from "react-icons/fa6";
+
+const platformIcons: any = {
+  instagram: <FaInstagram className="text-pink-500" />,
+  facebook: <FaFacebook className="text-blue-500" />,
+  tiktok: <FaTiktok className="text-white" />,
+  twitter: <FaXTwitter className="text-white" />,
+  telegram: <FaTelegram className="text-sky-400" />,
+  whatsapp: <FaWhatsapp className="text-green-500" />,
+  other: <FaLink className="text-gray-400" />,
+};
 
 export default function ListingDetailPage() {
   const { id } = useParams();
@@ -67,9 +86,14 @@ export default function ListingDetailPage() {
         </Link>
 
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-10 shadow-2xl">
-          <span className="inline-block bg-blue-600/20 text-blue-400 text-xs font-bold px-3 py-1 rounded-full uppercase">
-            {listing.platform}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-3xl">
+              {platformIcons[listing.platform] || platformIcons.other}
+            </span>
+            <span className="inline-block bg-blue-600/20 text-blue-400 text-xs font-bold px-3 py-1 rounded-full uppercase">
+              {listing.platform}
+            </span>
+          </div>
 
           <h1 className="text-2xl md:text-4xl font-bold mt-4">{listing.title}</h1>
           <p className="text-gray-400 mt-4 leading-relaxed">{listing.description}</p>

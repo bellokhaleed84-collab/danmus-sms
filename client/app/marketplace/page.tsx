@@ -4,6 +4,25 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import MobileNav from "@/components/MobileNav";
 import API from "@/lib/api";
+import {
+  FaInstagram,
+  FaFacebook,
+  FaTiktok,
+  FaXTwitter,
+  FaTelegram,
+  FaWhatsapp,
+  FaLink,
+} from "react-icons/fa6";
+
+const platformIcons: any = {
+  instagram: <FaInstagram className="text-pink-500" />,
+  facebook: <FaFacebook className="text-blue-500" />,
+  tiktok: <FaTiktok className="text-white" />,
+  twitter: <FaXTwitter className="text-white" />,
+  telegram: <FaTelegram className="text-sky-400" />,
+  whatsapp: <FaWhatsapp className="text-green-500" />,
+  other: <FaLink className="text-gray-400" />,
+};
 
 export default function MarketplacePage() {
   const [listings, setListings] = useState<any[]>([]);
@@ -47,12 +66,13 @@ export default function MarketplacePage() {
             <button
               key={p}
               onClick={() => setPlatform(p)}
-              className={`px-5 py-2 rounded-2xl font-semibold whitespace-nowrap transition ${
+              className={`px-5 py-2 rounded-2xl font-semibold whitespace-nowrap transition flex items-center gap-2 ${
                 platform === p
                   ? "bg-blue-600 text-white"
                   : "bg-[var(--card)] border border-[var(--border)] text-gray-400"
               }`}
             >
+              {p !== "" && <span className="text-lg">{platformIcons[p]}</span>}
               {p === "" ? "All" : p.charAt(0).toUpperCase() + p.slice(1)}
             </button>
           ))}
@@ -68,9 +88,14 @@ export default function MarketplacePage() {
             {listings.map((listing) => (
               <Link key={listing._id} href={`/marketplace/${listing._id}`}>
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 shadow-xl hover:border-blue-500 transition cursor-pointer h-full">
-                  <span className="inline-block bg-blue-600/20 text-blue-400 text-xs font-bold px-3 py-1 rounded-full uppercase">
-                    {listing.platform}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">
+                      {platformIcons[listing.platform] || platformIcons.other}
+                    </span>
+                    <span className="inline-block bg-blue-600/20 text-blue-400 text-xs font-bold px-3 py-1 rounded-full uppercase">
+                      {listing.platform}
+                    </span>
+                  </div>
                   <h3 className="text-xl font-bold mt-4">{listing.title}</h3>
                   <p className="text-gray-400 text-sm mt-2 line-clamp-2">{listing.description}</p>
                   <div className="flex items-center justify-between mt-5">

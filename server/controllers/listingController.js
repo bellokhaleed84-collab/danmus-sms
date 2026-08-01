@@ -142,7 +142,6 @@ const buyListing = async (req, res) => {
       status: "successful",
       description: `Purchased ${listing.platform} account: ${listing.title}`,
       paymentReference: String(listing._id),
-      platform: listing.platform,
     });
 
     res.status(200).json({

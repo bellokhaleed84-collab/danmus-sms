@@ -3,7 +3,7 @@ const Transaction = require("../models/Transaction");
 const axios = require("axios");
 
 const FIVESIM_API = "https://5sim.net/v1";
-const MARKUP = 1.8; // 80% markup on top of converted NGN price
+const MARKUP = 1.8;
 
 const fivesimHeaders = {
   Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
@@ -17,24 +17,18 @@ const ONE_HOUR = 60 * 60 * 1000;
 
 async function getUsdToNgnRate() {
   const now = Date.now();
-
   if (cachedRate && now - cachedAt < ONE_HOUR) {
     return cachedRate;
   }
-
   try {
     const response = await axios.get(
       "https://api.frankfurter.dev/v2/latest?base=USD&symbols=NGN"
     );
-
     cachedRate = response.data.rates.NGN;
     cachedAt = now;
-
     return cachedRate;
   } catch (error) {
     console.error("Exchange rate fetch failed:", error.message);
-
-    // Fallback rate if API fails (update manually if needed)
     return cachedRate || 1600;
   }
 }
@@ -45,7 +39,6 @@ const getCountries = async (req, res) => {
     const response = await axios.get(`${FIVESIM_API}/guest/countries`, {
       headers: fivesimHeaders,
     });
-
     res.status(200).json(response.data);
   } catch (error) {
     res.status(500).json({
@@ -54,31 +47,25 @@ const getCountries = async (req, res) => {
   }
 };
 
-// ── GET PRODUCTS BY COUNTRY (all services, NGN price) ──
+// ── GET PRODUCTS BY COUNTRY ──────────────────
 const getProducts = async (req, res) => {
   try {
     const { country } = req.params;
-
     const response = await axios.get(
       `${FIVESIM_API}/guest/products/${country}/any`,
       { headers: fivesimHeaders }
     );
-
     const usdToNgn = await getUsdToNgnRate();
-
     const products = response.data;
     const marked = {};
-
     Object.keys(products).forEach((service) => {
       const usdPrice = products[service].Price;
       const ngnPrice = usdPrice * usdToNgn * MARKUP;
-
       marked[service] = {
         ...products[service],
-        Price: Math.ceil(ngnPrice), // round up to nearest naira
+        Price: Math.ceil(ngnPrice),
       };
     });
-
     res.status(200).json(marked);
   } catch (error) {
     res.status(500).json({
@@ -101,7 +88,6 @@ const buySMS = async (req, res) => {
     const user = await User.findById(req.user._id);
     const smsCost = Number(price);
 
-    // Check user balance (price is already in NGN at this point)
     if (user.balance < smsCost) {
       return res.status(400).json({
         message: "Insufficient balance",
@@ -116,21 +102,23 @@ const buySMS = async (req, res) => {
 
     const order = fivesimResponse.data;
 
+    // LOG RAW RESPONSE TO SEE EXACT FIELD NAMES
+    console.log("====== 5SIM RAW ORDER RESPONSE ======");
+    console.log(JSON.stringify(order, null, 2));
+    console.log("=====================================");
+
     // Deduct balance
     user.balance -= smsCost;
     await user.save();
 
     // Save transaction
-    const transaction = await Transaction.create({
+    await Transaction.create({
       user: user._id,
       type: "sms_purchase",
       amount: smsCost,
       status: "successful",
       description: `Virtual number for ${service} in ${country}`,
       paymentReference: String(order.id),
-      phone: order.phone,
-      country: order.country,
-      service: order.product,
     });
 
     res.status(200).json({
@@ -141,12 +129,12 @@ const buySMS = async (req, res) => {
         phone: order.phone,
         country: order.country,
         service: order.product,
+        operator: order.operator,
         price: smsCost,
       },
-      transaction,
     });
   } catch (error) {
-    console.error("5sim error:", error?.response?.data || error.message);
+    console.error("5sim buy error:", error?.response?.data || error.message);
     res.status(500).json({
       message: error?.response?.data?.message || error.message,
     });
@@ -158,13 +146,28 @@ const checkSMS = async (req, res) => {
   try {
     const { orderId } = req.params;
 
+    console.log("====== CHECK SMS ORDER ID ======");
+    console.log(orderId);
+    console.log("================================");
+
+    if (!orderId || orderId === "undefined") {
+      return res.status(400).json({
+        message: "Invalid order ID",
+      });
+    }
+
     const response = await axios.get(
       `${FIVESIM_API}/user/check/${orderId}`,
       { headers: fivesimHeaders }
     );
 
+    console.log("====== 5SIM CHECK RESPONSE ======");
+    console.log(JSON.stringify(response.data, null, 2));
+    console.log("=================================");
+
     res.status(200).json(response.data);
   } catch (error) {
+    console.error("5sim check error:", error?.response?.data || error.message);
     res.status(500).json({
       message: error?.response?.data?.message || error.message,
     });
@@ -181,20 +184,8 @@ const cancelOrder = async (req, res) => {
       { headers: fivesimHeaders }
     );
 
-    // Refund user
-    const user = await User.findById(req.user._id);
-    const transaction = await Transaction.findOne({
-      paymentReference: String(orderId),
-    });
-
-    if (transaction) {
-      user.balance += transaction.amount;
-      await user.save();
-    }
-
     res.status(200).json({
-      message: "Order cancelled and balance refunded",
-      balance: user.balance,
+      message: "Order cancelled successfully",
     });
   } catch (error) {
     res.status(500).json({

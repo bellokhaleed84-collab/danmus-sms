@@ -50,7 +50,6 @@ function parseGrizzlyResponse(data) {
 // ── GET COUNTRIES ─────────────────────────────
 const getCountries = async (req, res) => {
   try {
-    // Try 5sim first
     const response = await axios.get(`${FIVESIM_API}/guest/countries`, {
       headers: fivesimHeaders,
       timeout: 5000,
@@ -58,7 +57,6 @@ const getCountries = async (req, res) => {
     return res.status(200).json(response.data);
   } catch (error) {
     console.log("5sim countries failed, using static list");
-    // Fallback static country list
     const countries = {
       russia: { text_en: "Russia" },
       ukraine: { text_en: "Ukraine" },
@@ -192,22 +190,37 @@ const buySMS = async (req, res) => {
           { headers: fivesimHeaders, timeout: 8000 }
         );
         const data = fivesimResponse.data;
-        console.log("5sim buy success ✅", data);
-        order = {
-          id: String(data.id),
-          phone: data.phone,
-          country: data.country,
-          service: data.product,
-          price: smsCost,
-        };
-        usedProvider = "5sim";
+        console.log("5sim buy response:", data);
+
+        // Check if 5sim returned a valid phone number
+        if (
+          data &&
+          data.id &&
+          data.phone &&
+          data.phone !== "no free phones" &&
+          data.phone !== "" &&
+          !data.phone.includes("no free")
+        ) {
+          order = {
+            id: String(data.id),
+            phone: data.phone,
+            country: data.country,
+            service: data.product,
+            price: smsCost,
+          };
+          usedProvider = "5sim";
+          console.log("5sim number assigned ✅", order.phone);
+        } else {
+          console.log("5sim returned no valid phone, falling back to Grizzly...");
+        }
       } catch (fivesimError) {
-        console.log("5sim buy failed, trying Grizzly SMS...");
+        console.log("5sim buy failed, trying Grizzly SMS...", fivesimError.message);
       }
     }
 
     // Fallback to Grizzly SMS
     if (!order) {
+      console.log("Trying Grizzly SMS...");
       const grizzlyResponse = await axios.get(GRIZZLY_API, {
         params: {
           api_key: process.env.GRIZZLY_API_KEY,
@@ -223,7 +236,7 @@ const buySMS = async (req, res) => {
 
       if (parsed.status !== "ACCESS_NUMBER") {
         return res.status(400).json({
-          message: `Failed to get number: ${parsed.status}`,
+          message: "No numbers available right now. Please try a different country or service.",
         });
       }
 
@@ -235,6 +248,7 @@ const buySMS = async (req, res) => {
         price: smsCost,
       };
       usedProvider = "grizzly";
+      console.log("Grizzly number assigned ✅", order.phone);
     }
 
     // Deduct balance
@@ -274,7 +288,6 @@ const checkSMS = async (req, res) => {
       return res.status(400).json({ message: "Invalid order ID" });
     }
 
-    // Determine provider from paymentReference prefix or query param
     const useGrizzly = provider === "grizzly" || orderId.startsWith("grizzly:");
     const cleanId = orderId.replace("grizzly:", "").replace("5sim:", "");
 
@@ -286,10 +299,8 @@ const checkSMS = async (req, res) => {
           id: cleanId,
         },
       });
-
       console.log("Grizzly check response:", response.data);
       const parsed = parseGrizzlyResponse(response.data);
-
       if (parsed.status === "STATUS_OK") {
         return res.status(200).json({
           sms: [{ code: parsed.code, text: `Your OTP code: ${parsed.code}` }],

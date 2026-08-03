@@ -34,11 +34,18 @@ export default function RegisterPage() {
   const [loading, setLoading] =
     useState(false);
 
+  const [agreed, setAgreed] = useState(false);
+
   async function handleRegister(
     e: React.FormEvent
   ) {
 
     e.preventDefault();
+
+    if (!agreed) {
+      alert("Please agree to the Terms & Conditions to continue");
+      return;
+    }
 
     if (password !== confirmPassword) {
 
@@ -271,10 +278,32 @@ export default function RegisterPage() {
 
             </div>
 
+            {/* TERMS CHECKBOX */}
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="terms"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-1 w-5 h-5 rounded accent-blue-600 cursor-pointer shrink-0"
+              />
+              <label htmlFor="terms" className="text-gray-300 text-sm leading-6 cursor-pointer">
+                I agree to the{" "}
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  className="text-blue-400 hover:text-blue-300 underline"
+                >
+                  Terms & Conditions
+                </Link>{" "}
+                of Danmus SMS
+              </label>
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 py-3 md:py-4 rounded-2xl font-bold text-white transition shadow-xl"
+              disabled={loading || !agreed}
+              className="w-full bg-blue-600 hover:bg-blue-700 py-3 md:py-4 rounded-2xl font-bold text-white transition shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
 
               {loading

@@ -16,6 +16,8 @@ const app = express();
 
 // ── CORS — restricted to known origins ────────
 const allowedOrigins = [
+  "https://danmussms.com",
+  "https://www.danmussms.com",
   "https://danmus-sms-ynmz.vercel.app",
   "http://localhost:3000",
 ];

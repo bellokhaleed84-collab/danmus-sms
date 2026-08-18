@@ -17,7 +17,6 @@ export default function BuyNumberPage() {
   const [sms, setSms] = useState<any>(null);
   const [checking, setChecking] = useState(false);
 
-  // Fetch user balance
   useEffect(() => {
     async function fetchUser() {
       try {
@@ -25,9 +24,7 @@ export default function BuyNumberPage() {
         if (!token) return;
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await response.json();
         if (response.ok) setBalance(data.balance || 0);
@@ -38,7 +35,6 @@ export default function BuyNumberPage() {
     fetchUser();
   }, []);
 
-  // Fetch countries on load
   useEffect(() => {
     async function fetchCountries() {
       try {
@@ -51,7 +47,6 @@ export default function BuyNumberPage() {
     fetchCountries();
   }, []);
 
-  // Fetch products (services + prices) when country changes
   useEffect(() => {
     if (!country) return;
     setService("");
@@ -68,7 +63,6 @@ export default function BuyNumberPage() {
     fetchProducts();
   }, [country]);
 
-  // Set price when service changes (price already included in products response)
   useEffect(() => {
     if (!service || !services[service]) {
       setPrice(null);
@@ -77,7 +71,6 @@ export default function BuyNumberPage() {
     setPrice(services[service].Price);
   }, [service, services]);
 
-  // Buy number
   async function handleBuyNumber() {
     if (!country || !service || !price) {
       alert("Please select country and service");
@@ -103,7 +96,7 @@ export default function BuyNumberPage() {
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      setOrder(data.order);
+      setOrder({ ...data.order, provider: data.provider });
       setSms(null);
       setBalance(data.balance);
     } catch (error: any) {
@@ -113,12 +106,13 @@ export default function BuyNumberPage() {
     }
   }
 
-  // Check SMS
   async function handleCheckSMS(silent = false) {
     if (!order) return;
     if (!silent) setChecking(true);
     try {
-      const res = await API.get(`/sms/check/${order.id}`);
+      const res = await API.get(
+        `/sms/check/${order.id}?provider=${order.provider}`
+      );
       setSms(res.data);
     } catch (error: any) {
       if (!silent) alert("Failed to check SMS. Please try again.");
@@ -127,10 +121,9 @@ export default function BuyNumberPage() {
     }
   }
 
-  // Auto-poll for SMS every 5 seconds while waiting
   useEffect(() => {
     if (!order) return;
-    if (sms?.sms && sms.sms.length > 0) return; // stop polling once received
+    if (sms?.sms && sms.sms.length > 0) return;
 
     const interval = setInterval(() => {
       handleCheckSMS(true);
@@ -138,28 +131,6 @@ export default function BuyNumberPage() {
 
     return () => clearInterval(interval);
   }, [order, sms]);
-
-  // Cancel order
-  async function handleCancel() {
-    if (!order) return;
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/sms/cancel/${order.id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      alert("Order cancelled. Balance refunded.");
-      setOrder(null);
-      setSms(null);
-      setBalance(data.balance);
-    } catch (error: any) {
-      alert(error.message || "Failed to cancel");
-    }
-  }
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all duration-300">
@@ -171,7 +142,6 @@ export default function BuyNumberPage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
-        {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
           <div>
             <h1 className="text-2xl md:text-5xl font-bold">Buy Number</h1>
@@ -184,7 +154,6 @@ export default function BuyNumberPage() {
           </Link>
         </div>
 
-        {/* WALLET CARD */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-[32px] p-6 md:p-10 shadow-2xl text-white mb-10">
           <p className="text-lg opacity-80">Wallet Balance</p>
           <h2 className="text-2xl md:text-6xl font-bold mt-4">
@@ -199,7 +168,6 @@ export default function BuyNumberPage() {
           </div>
         </div>
 
-        {/* ORDER RESULT */}
         {order ? (
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-[32px] p-6 md:p-10 shadow-2xl mb-10">
             <h2 className="text-2xl font-bold mb-6 text-green-400">Number Purchased!</h2>
@@ -210,7 +178,6 @@ export default function BuyNumberPage() {
               <p><span className="text-gray-400">Price:</span> ₦{order.price?.toLocaleString()}</p>
             </div>
 
-            {/* SMS RESULT */}
             {sms?.sms && sms.sms.length > 0 ? (
               <div className="mt-6 bg-green-600/20 border border-green-600 rounded-2xl p-5">
                 <h3 className="text-green-400 font-bold text-xl mb-2">SMS Received!</h3>
@@ -234,23 +201,15 @@ export default function BuyNumberPage() {
               >
                 {checking ? "Checking..." : "Check SMS Now"}
               </button>
-              <button
-                onClick={handleCancel}
-                className="flex-1 bg-red-600 hover:bg-red-700 py-4 rounded-2xl font-bold transition"
-              >
-                Cancel & Refund
-              </button>
             </div>
           </div>
         ) : (
 
-          /* BUY CARD */
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-[32px] p-6 md:p-10 shadow-2xl">
             <h2 className="text-2xl md:text-3xl font-bold mb-8">Purchase Number</h2>
 
             <div className="grid md:grid-cols-2 gap-5 md:p-8">
 
-              {/* COUNTRY */}
               <div>
                 <label htmlFor="country" className="block mb-3 text-lg font-semibold">
                   Select Country
@@ -271,7 +230,6 @@ export default function BuyNumberPage() {
                 </select>
               </div>
 
-              {/* SERVICE */}
               <div>
                 <label htmlFor="service" className="block mb-3 text-lg font-semibold">
                   Select Service
@@ -297,7 +255,6 @@ export default function BuyNumberPage() {
 
             </div>
 
-            {/* PRICE CARD */}
             <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 mt-10">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                 <div>
@@ -320,7 +277,6 @@ export default function BuyNumberPage() {
           </div>
         )}
 
-        {/* FEATURES */}
         <div className="grid md:grid-cols-3 gap-6 mt-10">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
             <div className="text-5xl mb-5">⚡</div>

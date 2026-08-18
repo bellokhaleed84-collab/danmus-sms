@@ -5,6 +5,7 @@ const {
   buySMS,
   checkSMS,
   cancelOrder,
+  getSmsHistory,
 } = require("../controllers/smsController");
 const { protect } = require("../middleware/authMiddleware");
 
@@ -18,5 +19,6 @@ router.get("/products/:country", getProducts);
 router.post("/buy", protect, buySMS);
 router.get("/check/:orderId", protect, checkSMS);
 router.get("/cancel/:orderId", protect, cancelOrder);
+router.get("/history", protect, getSmsHistory);
 
 module.exports = router;

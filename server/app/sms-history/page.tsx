@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import API from "@/lib/api";
 import Link from "next/link";
 import MobileNav from "@/components/MobileNav";
 
@@ -16,26 +16,16 @@ export default function SmsHistoryPage() {
 
     async function fetchSmsHistory() {
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
 
-      if (!user) return;
+        const response = await API.get("/sms/history");
 
-      const { data, error } = await supabase
-        .from("sms_orders")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        setSmsHistory(response.data);
 
-      if (data) {
-
-        setSmsHistory(data);
-      }
-
-      if (error) {
+      } catch (error) {
 
         console.log(error);
+
       }
 
       setLoading(false);
@@ -49,11 +39,11 @@ export default function SmsHistoryPage() {
   const totalOrders = smsHistory.length;
 
   const completedOrders = smsHistory.filter(
-    (sms) => sms.status === "Completed"
+    (sms) => sms.otp
   ).length;
 
   const pendingOrders = smsHistory.filter(
-    (sms) => sms.status === "Pending"
+    (sms) => !sms.otp
   ).length;
 
   return (
@@ -212,7 +202,7 @@ export default function SmsHistoryPage() {
                   smsHistory.map((sms) => (
 
                     <tr
-                      key={sms.id}
+                      key={sms._id}
                       className="border-t border-[var(--border)] hover:bg-[var(--input)] transition"
                     >
 
@@ -225,26 +215,24 @@ export default function SmsHistoryPage() {
                       </td>
 
                       <td className="p-5 md:p-6">
-                        {sms.number}
+                        {sms.phone}
                       </td>
 
                       <td className="p-5 md:p-6 font-bold tracking-widest">
-                        {sms.otp}
+                        {sms.otp || "—"}
                       </td>
 
                       <td className="p-5 md:p-6">
 
                         <span
                           className={`px-4 py-2 rounded-xl text-sm font-semibold ${
-                            sms.status === "Completed"
+                            sms.otp
                               ? "bg-green-500/20 text-green-500"
-                              : sms.status === "Pending"
-                              ? "bg-yellow-500/20 text-yellow-500"
-                              : "bg-red-500/20 text-red-500"
+                              : "bg-yellow-500/20 text-yellow-500"
                           }`}
                         >
 
-                          {sms.status}
+                          {sms.otp ? "Completed" : "Pending"}
 
                         </span>
 
@@ -252,7 +240,7 @@ export default function SmsHistoryPage() {
 
                       <td className="p-5 md:p-6 text-gray-400">
 
-                        {new Date(sms.created_at).toLocaleDateString()}
+                        {new Date(sms.createdAt).toLocaleDateString()}
 
                       </td>
 

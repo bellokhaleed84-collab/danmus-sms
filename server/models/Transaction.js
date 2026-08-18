@@ -46,6 +46,10 @@ const transactionSchema = new mongoose.Schema(
       type: String, // SMS purchases: e.g. "whatsapp", "telegram"
     },
 
+    otp: {
+      type: String, // SMS purchases: the verification code received
+    },
+
     platform: {
       type: String, // Marketplace purchases: e.g. "instagram", "tiktok"
     },

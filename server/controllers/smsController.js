@@ -192,7 +192,6 @@ const buySMS = async (req, res) => {
         const data = fivesimResponse.data;
         console.log("5sim buy response:", data);
 
-        // Check if 5sim returned a valid phone number
         if (
           data &&
           data.id &&
@@ -263,6 +262,9 @@ const buySMS = async (req, res) => {
       status: "successful",
       description: `Virtual number for ${service} in ${country} via ${usedProvider}`,
       paymentReference: `${usedProvider}:${order.id}`,
+      phone: order.phone,
+      country: order.country,
+      service: order.service,
     });
 
     res.status(200).json({
@@ -291,6 +293,8 @@ const checkSMS = async (req, res) => {
     const useGrizzly = provider === "grizzly" || orderId.startsWith("grizzly:");
     const cleanId = orderId.replace("grizzly:", "").replace("5sim:", "");
 
+    let code = null;
+
     if (useGrizzly) {
       const response = await axios.get(GRIZZLY_API, {
         params: {
@@ -302,38 +306,52 @@ const checkSMS = async (req, res) => {
       console.log("Grizzly check response:", response.data);
       const parsed = parseGrizzlyResponse(response.data);
       if (parsed.status === "STATUS_OK") {
-        return res.status(200).json({
-          sms: [{ code: parsed.code, text: `Your OTP code: ${parsed.code}` }],
-        });
+        code = parsed.code;
+      } else {
+        return res.status(200).json({ sms: [], status: parsed.status });
       }
-      return res.status(200).json({ sms: [], status: parsed.status });
+    } else {
+      try {
+        const response = await axios.get(
+          `${FIVESIM_API}/user/check/${cleanId}`,
+          { headers: fivesimHeaders, timeout: 5000 }
+        );
+        console.log("5sim check response:", response.data);
+        const sms = response.data.sms || [];
+        if (sms.length > 0) {
+          code = sms[0].code;
+        } else {
+          return res.status(200).json(response.data);
+        }
+      } catch (fivesimError) {
+        console.log("5sim check failed, trying Grizzly...");
+        const response = await axios.get(GRIZZLY_API, {
+          params: {
+            api_key: process.env.GRIZZLY_API_KEY,
+            action: "getStatus",
+            id: cleanId,
+          },
+        });
+        const parsed = parseGrizzlyResponse(response.data);
+        if (parsed.status === "STATUS_OK") {
+          code = parsed.code;
+        } else {
+          return res.status(200).json({ sms: [], status: parsed.status });
+        }
+      }
     }
 
-    // Default: try 5sim
-    try {
-      const response = await axios.get(
-        `${FIVESIM_API}/user/check/${cleanId}`,
-        { headers: fivesimHeaders, timeout: 5000 }
+    // Save the OTP to the matching transaction so it survives refresh
+    if (code) {
+      await Transaction.findOneAndUpdate(
+        { paymentReference: { $regex: cleanId } },
+        { otp: code }
       );
-      console.log("5sim check response:", response.data);
-      return res.status(200).json(response.data);
-    } catch (fivesimError) {
-      console.log("5sim check failed, trying Grizzly...");
-      const response = await axios.get(GRIZZLY_API, {
-        params: {
-          api_key: process.env.GRIZZLY_API_KEY,
-          action: "getStatus",
-          id: cleanId,
-        },
-      });
-      const parsed = parseGrizzlyResponse(response.data);
-      if (parsed.status === "STATUS_OK") {
-        return res.status(200).json({
-          sms: [{ code: parsed.code, text: `Your OTP code: ${parsed.code}` }],
-        });
-      }
-      return res.status(200).json({ sms: [], status: parsed.status });
     }
+
+    return res.status(200).json({
+      sms: [{ code, text: `Your OTP code: ${code}` }],
+    });
 
   } catch (error) {
     console.error("Check SMS error:", error?.response?.data || error.message);
@@ -401,10 +419,25 @@ const cancelOrder = async (req, res) => {
   }
 };
 
+// ── GET SMS HISTORY ────────────────────────────
+const getSmsHistory = async (req, res) => {
+  try {
+    const transactions = await Transaction.find({
+      user: req.user._id,
+      type: "sms_purchase",
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(transactions);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getCountries,
   getProducts,
   buySMS,
   checkSMS,
   cancelOrder,
+  getSmsHistory,
 };

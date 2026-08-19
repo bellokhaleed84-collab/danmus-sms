@@ -5,11 +5,31 @@ import Link from "next/link";
 import MobileNav from "@/components/MobileNav";
 import API from "@/lib/api";
 
+type ProviderKey = "smspool" | "fivesim" | "grizzly";
+
+type ProviderEntry = {
+  label: string;
+  price: number;
+  qty: number;
+};
+
+type ServiceEntry = {
+  providers: Partial<Record<ProviderKey, ProviderEntry>>;
+};
+
+const PROVIDER_ORDER: ProviderKey[] = ["smspool", "fivesim", "grizzly"];
+const PROVIDER_FALLBACK_LABELS: Record<ProviderKey, string> = {
+  smspool: "Provider 1",
+  fivesim: "Provider 2",
+  grizzly: "Provider 3",
+};
+
 export default function BuyNumberPage() {
   const [countries, setCountries] = useState<any>({});
-  const [services, setServices] = useState<any>({});
+  const [services, setServices] = useState<Record<string, ServiceEntry>>({});
   const [country, setCountry] = useState("");
   const [service, setService] = useState("");
+  const [selectedProvider, setSelectedProvider] = useState<ProviderKey | null>(null);
   const [price, setPrice] = useState<number | null>(null);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -63,6 +83,7 @@ export default function BuyNumberPage() {
   useEffect(() => {
     if (!country) return;
     setService("");
+    setSelectedProvider(null);
     setPrice(null);
     async function fetchProducts() {
       try {
@@ -76,20 +97,24 @@ export default function BuyNumberPage() {
     fetchProducts();
   }, [country]);
 
+  // Reset provider selection whenever the service changes — price now comes
+  // from picking a provider, not automatically from the service.
   useEffect(() => {
-    if (!service || !services[service]) {
-      setPrice(null);
-      return;
-    }
-    setPrice(services[service].Price);
-  }, [service, services]);
+    setSelectedProvider(null);
+    setPrice(null);
+  }, [service]);
+
+  function selectProvider(providerKey: ProviderKey, providerPrice: number) {
+    setSelectedProvider(providerKey);
+    setPrice(providerPrice);
+  }
 
   async function handleBuyNumber() {
-    if (!country || !service || !price) {
-      alert("Please select country and service");
+    if (!country || !service || !selectedProvider) {
+      alert("Please select country, service and a provider");
       return;
     }
-    if (balance < price) {
+    if (price !== null && balance < price) {
       alert("Insufficient wallet balance");
       return;
     }
@@ -104,7 +129,9 @@ export default function BuyNumberPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ country, service, price }),
+          // No price sent — backend re-verifies the live price for the
+          // chosen provider and uses that for the deduction.
+          body: JSON.stringify({ country, service, provider: selectedProvider }),
         }
       );
       const data = await res.json();
@@ -144,6 +171,13 @@ export default function BuyNumberPage() {
 
     return () => clearInterval(interval);
   }, [order, sms]);
+
+  const availableServiceKeys = Object.keys(services).filter((s) => {
+    if (lockedServices.includes(s.toLowerCase())) return false;
+    const providers = services[s]?.providers || {};
+    // Only show the service if at least one provider has stock
+    return Object.values(providers).some((p) => p && p.qty > 0);
+  });
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all duration-300">
@@ -256,17 +290,58 @@ export default function BuyNumberPage() {
                   className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500 disabled:opacity-50"
                 >
                   <option value="">Choose service</option>
-                  {Object.keys(services)
-                    .filter((s) => services[s]?.Qty > 0 && !lockedServices.includes(s.toLowerCase()))
-                    .map((s) => (
-                      <option key={s} value={s}>
-                        {s} — ₦{services[s].Price?.toLocaleString()}
-                      </option>
-                    ))}
+                  {availableServiceKeys.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
                 </select>
               </div>
 
             </div>
+
+            {service && services[service]?.providers && (
+              <div className="mt-8 md:px-8">
+                <label className="block mb-3 text-lg font-semibold">Select Provider</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {PROVIDER_ORDER.map((p) => {
+                    const entry = services[service].providers[p];
+                    const unavailable = !entry || entry.qty <= 0;
+                    const active = selectedProvider === p;
+
+                    if (unavailable) {
+                      return (
+                        <div
+                          key={p}
+                          className="rounded-2xl border border-[var(--border)] p-5 opacity-40"
+                        >
+                          <p className="font-bold">{PROVIDER_FALLBACK_LABELS[p]}</p>
+                          <p className="text-sm text-gray-400 mt-1">Unavailable</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => selectProvider(p, entry!.price)}
+                        className={`rounded-2xl border p-5 text-left transition ${
+                          active
+                            ? "border-blue-500 bg-blue-600/10"
+                            : "border-[var(--border)] bg-[var(--input)] hover:border-blue-500/50"
+                        }`}
+                      >
+                        <p className="font-bold">{entry!.label || PROVIDER_FALLBACK_LABELS[p]}</p>
+                        <p className="text-xl font-bold text-blue-500 mt-1">
+                          ₦{entry!.price.toLocaleString()}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 mt-10">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -282,7 +357,7 @@ export default function BuyNumberPage() {
 
             <button
               onClick={handleBuyNumber}
-              disabled={loading || !price}
+              disabled={loading || !selectedProvider}
               className="w-full bg-blue-600 hover:bg-blue-700 py-5 rounded-2xl font-bold text-lg transition shadow-xl mt-10 disabled:opacity-50"
             >
               {loading ? "Purchasing..." : "Buy Number"}

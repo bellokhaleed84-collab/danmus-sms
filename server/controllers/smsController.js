@@ -116,7 +116,6 @@ const getCountries = async (req, res) => {
 };
 
 // ── GET PRODUCTS BY COUNTRY (grouped by provider) ──────────────────
-// Returns: { <serviceSlug>: { providers: { smspool?, fivesim?, grizzly? } } }
 const getProducts = async (req, res) => {
   try {
     const { country } = req.params;
@@ -155,6 +154,7 @@ const getProducts = async (req, res) => {
         },
         timeout: 5000,
       });
+      console.log("Grizzly raw getPrices response:", JSON.stringify(response.data).slice(0, 1000));
       const data = response.data;
       if (data && typeof data === "object") {
         Object.keys(data).forEach((service) => {
@@ -188,6 +188,7 @@ const getProducts = async (req, res) => {
           },
           timeout: 5000,
         });
+        console.log("SMSPool raw getPrices response:", JSON.stringify(response.data).slice(0, 1000));
         const data = response.data;
         if (data && typeof data === "object") {
           Object.keys(data).forEach((serviceIdKey) => {
@@ -209,6 +210,8 @@ const getProducts = async (req, res) => {
       } catch (error) {
         console.log("SMSPool products failed:", error.message);
       }
+    } else {
+      console.log("SMSPool skipped — country not in SMSPOOL_COUNTRY_MAP:", country);
     }
 
     return res.status(200).json(grouped);
@@ -276,8 +279,6 @@ async function getSmspoolPrice(country, service) {
 }
 
 // ── BUY NUMBER ─────────────────────────────────
-// User explicitly picks the provider on the frontend — no auto-fallback.
-// Price is re-verified server-side right before purchase.
 const buySMS = async (req, res) => {
   try {
     const { country, service, provider } = req.body;

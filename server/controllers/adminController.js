@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Transaction = require("../models/Transaction");
+const ServiceControl = require("../models/ServiceControl");
 
 // ── GET ALL USERS ─────────────────────────────
 const getAllUsers = async (req, res) => {
@@ -54,7 +55,6 @@ const deleteUser = async (req, res) => {
     }
 
     await User.findByIdAndDelete(userId);
-
     await Transaction.deleteMany({ user: userId });
 
     res.status(200).json({ message: "User deleted successfully" });
@@ -75,7 +75,6 @@ const banUser = async (req, res) => {
     }
 
     user.role = user.role === "banned" ? "user" : "banned";
-
     await user.save();
 
     res.status(200).json({
@@ -88,6 +87,7 @@ const banUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 // ── GET ALL TRANSACTIONS ──────────────────────
 const getAllTransactions = async (req, res) => {
   try {
@@ -100,6 +100,7 @@ const getAllTransactions = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 // ── ADJUST USER BALANCE ───────────────────────
 const adjustUserBalance = async (req, res) => {
   try {
@@ -122,7 +123,6 @@ const adjustUserBalance = async (req, res) => {
       return res.status(400).json({ message: "User has insufficient balance" });
     }
 
-    // Add or deduct
     if (type === "deduct") {
       user.balance -= numAmount;
     } else {
@@ -131,7 +131,6 @@ const adjustUserBalance = async (req, res) => {
 
     await user.save();
 
-    // Save transaction
     await Transaction.create({
       user: user._id,
       type: "deposit",
@@ -149,6 +148,70 @@ const adjustUserBalance = async (req, res) => {
   }
 };
 
+// ── GET ALL SERVICE CONTROLS ──────────────────
+const getServiceControls = async (req, res) => {
+  try {
+    const defaults = [
+      { key: "whatsapp", type: "service", label: "WhatsApp" },
+      { key: "telegram", type: "service", label: "Telegram" },
+      { key: "google", type: "service", label: "Google" },
+      { key: "facebook", type: "service", label: "Facebook" },
+      { key: "tiktok", type: "service", label: "TikTok" },
+      { key: "instagram", type: "service", label: "Instagram" },
+      { key: "5sim", type: "provider", label: "5sim Provider" },
+      { key: "grizzly", type: "provider", label: "Grizzly SMS Provider" },
+    ];
+
+    for (const item of defaults) {
+      await ServiceControl.findOneAndUpdate(
+        { key: item.key },
+        { $setOnInsert: item },
+        { upsert: true, new: true }
+      );
+    }
+
+    const controls = await ServiceControl.find().sort({ type: 1, label: 1 });
+    res.status(200).json(controls);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ── TOGGLE SERVICE CONTROL ────────────────────
+const toggleServiceControl = async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { locked, reason } = req.body;
+
+    const control = await ServiceControl.findOneAndUpdate(
+      { key },
+      { locked, reason: reason || "" },
+      { new: true }
+    );
+
+    if (!control) {
+      return res.status(404).json({ message: "Service not found" });
+    }
+
+    res.status(200).json({
+      message: `${control.label} ${locked ? "locked" : "unlocked"} successfully`,
+      control,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ── GET LOCKED SERVICES (public) ─────────────
+const getLockedServices = async (req, res) => {
+  try {
+    const locked = await ServiceControl.find({ locked: true });
+    res.status(200).json(locked);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getPlatformStats,
@@ -156,4 +219,7 @@ module.exports = {
   banUser,
   getAllTransactions,
   adjustUserBalance,
+  getServiceControls,
+  toggleServiceControl,
+  getLockedServices,
 };

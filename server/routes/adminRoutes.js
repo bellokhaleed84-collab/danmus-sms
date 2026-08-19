@@ -7,6 +7,9 @@ const {
   banUser,
   getAllTransactions,
   adjustUserBalance,
+  getServiceControls,
+  toggleServiceControl,
+  getLockedServices,
 } = require("../controllers/adminController");
 const { protect } = require("../middleware/authMiddleware");
 
@@ -24,5 +27,8 @@ router.delete("/users/:userId", protect, adminOnly, deleteUser);
 router.patch("/users/:userId/ban", protect, adminOnly, banUser);
 router.get("/transactions", protect, adminOnly, getAllTransactions);
 router.patch("/users/:userId/balance", protect, adminOnly, adjustUserBalance);
+router.get("/service-controls", protect, adminOnly, getServiceControls);
+router.patch("/service-controls/:key", protect, adminOnly, toggleServiceControl);
+router.get("/locked-services", getLockedServices);
 
 module.exports = router;

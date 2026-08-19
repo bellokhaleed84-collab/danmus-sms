@@ -24,9 +24,28 @@ const PROVIDER_LABELS = {
 };
 const PROVIDER_ORDER = ["smspool", "fivesim", "grizzly"];
 
-// Grizzly services this app supports. Uses the same plain slugs your
-// original getNumber/buy call already used successfully (country: "usa",
-// service: "whatsapp") — no separate code mapping needed.
+// SMSPool's native API needs an ISO alpha-2 country code, not this app's
+// internal country slug. Extend as you support more countries.
+const SMSPOOL_ISO_COUNTRY = {
+  usa: "US",
+  russia: "RU",
+  kazakhstan: "KZ",
+  thailand: "TH",
+  mexico: "MX",
+  pakistan: "PK",
+};
+
+// SMSPool matches service by proper-cased name.
+const SMSPOOL_SERVICE_NAME = {
+  whatsapp: "WhatsApp",
+  telegram: "Telegram",
+  google: "Google",
+  facebook: "Facebook",
+  tiktok: "TikTok",
+  instagram: "Instagram",
+};
+
+// Grizzly services this app supports (used for both listing and buy).
 const GRIZZLY_SERVICES = ["whatsapp", "telegram", "google", "facebook", "tiktok", "instagram"];
 
 // ── EXCHANGE RATE CACHE ───────────────────────
@@ -202,11 +221,18 @@ const buySMS = async (req, res) => {
 
     // ── SMSPool: native API — cost comes back in the response ──
     if (provider === "smspool") {
+      const isoCountry = SMSPOOL_ISO_COUNTRY[country.toLowerCase()];
+      const properService = SMSPOOL_SERVICE_NAME[service.toLowerCase()];
+      if (!isoCountry || !properService) {
+        return res.status(400).json({
+          message: "Provider 1 doesn't support this country/service combination.",
+        });
+      }
       const response = await axios.post(`${SMSPOOL_API}/purchase/sms`, null, {
         params: {
           key: process.env.SMSPOOL_API_KEY,
-          country,
-          service,
+          country: isoCountry,
+          service: properService,
           // max_price is SMSPool's own USD ceiling param — convert our NGN
           // budget back to USD as a safety cap, if the client supplied one.
           ...(maxPriceNgn
@@ -264,63 +290,31 @@ const buySMS = async (req, res) => {
 
     // ── Grizzly ──
     if (provider === "grizzly") {
-      // getPrices is broken (BAD_ACTION) on this account — get real cost by
-      // diffing balance before/after instead, using the standard getBalance action.
-      let balanceBefore = null;
+      // getNumber with plain slugs (country: "usa", service: "whatsapp") is
+      // confirmed BAD_ACTION on this account — never actually worked, only
+      // assumed. Rather than guess again, refuse cleanly and log the real
+      // country/service lists so the next deploy can use correct codes.
       try {
-        const balResp = await axios.get(GRIZZLY_API, {
-          params: { api_key: process.env.GRIZZLY_API_KEY, action: "getBalance" },
+        const countriesResp = await axios.get(GRIZZLY_API, {
+          params: { api_key: process.env.GRIZZLY_API_KEY, action: "getCountries" },
           timeout: 5000,
         });
-        console.log("Grizzly balance before:", balResp.data);
-        const match = String(balResp.data).match(/ACCESS_BALANCE:([\d.]+)/);
-        balanceBefore = match ? Number(match[1]) : null;
-      } catch (balError) {
-        console.log("Grizzly getBalance (before) failed:", balError.message);
+        console.log("Grizzly getCountries raw:", JSON.stringify(countriesResp.data).slice(0, 1500));
+      } catch (e) {
+        console.log("Grizzly getCountries failed:", e.message);
       }
-
-      const response = await axios.get(GRIZZLY_API, {
-        params: {
-          api_key: process.env.GRIZZLY_API_KEY,
-          action: "getNumber",
-          service, // plain slug, e.g. "whatsapp"
-          country, // plain slug, e.g. "usa"
-        },
-        timeout: 8000,
+      try {
+        const servicesResp = await axios.get(GRIZZLY_API, {
+          params: { api_key: process.env.GRIZZLY_API_KEY, action: "getServices" },
+          timeout: 5000,
+        });
+        console.log("Grizzly getServices raw:", JSON.stringify(servicesResp.data).slice(0, 1500));
+      } catch (e) {
+        console.log("Grizzly getServices failed:", e.message);
+      }
+      return res.status(400).json({
+        message: "Provider 3 is temporarily unavailable while we confirm its country/service codes. Please try Provider 2.",
       });
-      console.log("Grizzly buy response:", response.data);
-      const parsed = parseHandlerApiResponse(response.data);
-      if (parsed.status !== "ACCESS_NUMBER") {
-        return res.status(400).json({ message: "Provider 3 has no numbers available right now." });
-      }
-
-      let grizzlyUsdCost = null;
-      if (balanceBefore != null) {
-        try {
-          const balResp2 = await axios.get(GRIZZLY_API, {
-            params: { api_key: process.env.GRIZZLY_API_KEY, action: "getBalance" },
-            timeout: 5000,
-          });
-          console.log("Grizzly balance after:", balResp2.data);
-          const match2 = String(balResp2.data).match(/ACCESS_BALANCE:([\d.]+)/);
-          const balanceAfter = match2 ? Number(match2[1]) : null;
-          if (balanceAfter != null) {
-            const diff = balanceBefore - balanceAfter;
-            if (diff > 0) grizzlyUsdCost = diff;
-          }
-        } catch (balError) {
-          console.log("Grizzly getBalance (after) failed:", balError.message);
-        }
-      }
-      if (grizzlyUsdCost == null) {
-        // Refuse to guess — cancel this order rather than charge an unknown amount.
-        await axios.get(GRIZZLY_API, {
-          params: { api_key: process.env.GRIZZLY_API_KEY, action: "setStatus", id: parsed.id, status: 8 },
-        }).catch(() => {});
-        return res.status(500).json({ message: "Could not confirm price for Provider 3. Please try again." });
-      }
-      smsCost = Math.ceil(grizzlyUsdCost * usdToNgn * MARKUP);
-      order = { id: parsed.id, phone: parsed.phone, country, service, price: smsCost };
     }
 
     if (user.balance < smsCost) {

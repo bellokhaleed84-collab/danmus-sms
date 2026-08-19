@@ -27,7 +27,6 @@ export default function AdminPage() {
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [viewTxUser, setViewTxUser] = useState<any | null>(null);
 
-  // ── LISTINGS STATE ──
   const [listings, setListings] = useState<any[]>([]);
   const [listingFilter, setListingFilter] = useState("all");
   const [showListingForm, setShowListingForm] = useState(false);
@@ -46,6 +45,9 @@ export default function AdminPage() {
   });
   const [listingActionLoading, setListingActionLoading] = useState<string | null>(null);
 
+  const [serviceControls, setServiceControls] = useState<any[]>([]);
+  const [controlLoading, setControlLoading] = useState<string | null>(null);
+
   useEffect(() => {
     async function loadAdmin() {
       const token = localStorage.getItem("token");
@@ -54,16 +56,18 @@ export default function AdminPage() {
       if (user.role !== "admin") { router.push("/dashboard"); return; }
       setAdminEmail(user.email);
       try {
-        const [usersRes, statsRes, txRes, listingsRes] = await Promise.all([
+        const [usersRes, statsRes, txRes, listingsRes, controlsRes] = await Promise.all([
           API.get("/admin/users", { headers: { Authorization: `Bearer ${token}` } }),
           API.get("/admin/stats", { headers: { Authorization: `Bearer ${token}` } }),
           API.get("/admin/transactions", { headers: { Authorization: `Bearer ${token}` } }),
           API.get("/listings/admin/all", { headers: { Authorization: `Bearer ${token}` } }),
+          API.get("/admin/service-controls", { headers: { Authorization: `Bearer ${token}` } }),
         ]);
         setUsers(usersRes.data);
         setStats(statsRes.data);
         setTransactions(txRes.data);
         setListings(listingsRes.data);
+        setServiceControls(controlsRes.data);
       } catch (error) {
         console.log(error);
       }
@@ -131,7 +135,6 @@ export default function AdminPage() {
     setBalanceLoading(false);
   }
 
-  // ── LISTINGS HANDLERS ──
   function handleListingFormChange(e: any) {
     setListingForm({ ...listingForm, [e.target.name]: e.target.value });
   }
@@ -198,6 +201,27 @@ export default function AdminPage() {
     setListingActionLoading(null);
   }
 
+  async function handleToggleService(key: string, currentlyLocked: boolean) {
+    const token = localStorage.getItem("token");
+    setControlLoading(key);
+    try {
+      const reason = !currentlyLocked
+        ? prompt("Reason for locking (optional):") || ""
+        : "";
+      const res = await API.patch(
+        `/admin/service-controls/${key}`,
+        { locked: !currentlyLocked, reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setServiceControls((prev) =>
+        prev.map((c) => (c.key === key ? res.data.control : c))
+      );
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Failed to update service");
+    }
+    setControlLoading(null);
+  }
+
   const filteredUsers = users.filter(
     (u) =>
       u.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -243,7 +267,6 @@ export default function AdminPage() {
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 blur-[120px] rounded-full" />
       </div>
 
-      {/* BALANCE MODAL */}
       {balanceUserId && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl">
@@ -310,7 +333,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* USER TRANSACTIONS MODAL */}
       {viewTxUser && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl max-h-[80vh] overflow-y-auto">
@@ -377,7 +399,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* CREATE LISTING MODAL */}
       {showListingForm && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4 py-8 overflow-y-auto">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl my-auto">
@@ -527,7 +548,6 @@ export default function AdminPage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
-        {/* HEADER */}
         <div className="flex flex-col gap-5 mb-8 md:mb-10 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl md:text-5xl font-bold">Admin Dashboard</h1>
@@ -548,14 +568,12 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* ADMIN ACCESS */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-2xl mb-8 md:mb-10">
           <h2 className="text-lg md:text-3xl font-bold mb-3 md:mb-4">Admin Access</h2>
           <p className="text-gray-400 text-sm md:text-lg">Logged in as:</p>
           <p className="text-blue-500 font-bold text-lg md:text-2xl mt-1 md:mt-2 truncate">{adminEmail}</p>
         </div>
 
-        {/* STATS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8 md:mb-10">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-xl">
             <p className="text-gray-400 text-xs md:text-base">Total Users</p>
@@ -577,7 +595,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* USERS */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl">
 
           <div className="flex flex-col gap-4 mb-6 md:mb-8 md:flex-row md:items-center md:justify-between">
@@ -677,7 +694,6 @@ export default function AdminPage() {
 
         </div>
 
-        {/* TRANSACTIONS */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl mt-8 md:mt-10">
 
           <div className="flex flex-col gap-4 mb-6 md:mb-8 md:flex-row md:items-center md:justify-between">
@@ -748,7 +764,6 @@ export default function AdminPage() {
 
         </div>
 
-        {/* MARKETPLACE LISTINGS */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl mt-8 md:mt-10">
 
           <div className="flex flex-col gap-4 mb-6 md:mb-8 md:flex-row md:items-center md:justify-between">
@@ -836,6 +851,50 @@ export default function AdminPage() {
             ))}
           </div>
 
+        </div>
+
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl mt-8 md:mt-10">
+          <h2 className="text-xl md:text-3xl font-bold mb-6 md:mb-8">Service Controls</h2>
+
+          {serviceControls.length === 0 && (
+            <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl p-8 md:p-10 text-center">
+              <h3 className="text-lg md:text-2xl font-bold">No Services Found</h3>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            {serviceControls.map((control) => (
+              <div
+                key={control.key}
+                className={`border rounded-2xl p-4 ${
+                  control.locked
+                    ? "bg-red-500/10 border-red-500/40"
+                    : "bg-[var(--input)] border-[var(--border)]"
+                }`}
+              >
+                <p className="font-semibold text-sm truncate">{control.label}</p>
+                <p className="text-gray-500 text-[11px] mt-1 uppercase">{control.type}</p>
+                {control.locked && control.reason && (
+                  <p className="text-red-400 text-[11px] mt-2 truncate">{control.reason}</p>
+                )}
+                <button
+                  onClick={() => handleToggleService(control.key, control.locked)}
+                  disabled={controlLoading === control.key}
+                  className={`w-full mt-3 py-2 rounded-xl text-xs font-semibold transition ${
+                    control.locked
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-red-600 hover:bg-red-700"
+                  }`}
+                >
+                  {controlLoading === control.key
+                    ? "..."
+                    : control.locked
+                    ? "Unlock"
+                    : "Lock"}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
       </div>

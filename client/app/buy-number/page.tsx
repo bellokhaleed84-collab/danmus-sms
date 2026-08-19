@@ -16,6 +16,7 @@ export default function BuyNumberPage() {
   const [order, setOrder] = useState<any>(null);
   const [sms, setSms] = useState<any>(null);
   const [checking, setChecking] = useState(false);
+  const [lockedServices, setLockedServices] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchUser() {
@@ -45,6 +46,18 @@ export default function BuyNumberPage() {
       }
     }
     fetchCountries();
+  }, []);
+
+  useEffect(() => {
+    async function fetchLocked() {
+      try {
+        const res = await API.get("/admin/locked-services");
+        setLockedServices(res.data.map((s: any) => s.key.toLowerCase()));
+      } catch (error) {
+        console.log(error);
+      }
+    }
+    fetchLocked();
   }, []);
 
   useEffect(() => {
@@ -244,7 +257,7 @@ export default function BuyNumberPage() {
                 >
                   <option value="">Choose service</option>
                   {Object.keys(services)
-                    .filter((s) => services[s]?.Qty > 0)
+                    .filter((s) => services[s]?.Qty > 0 && !lockedServices.includes(s.toLowerCase()))
                     .map((s) => (
                       <option key={s} value={s}>
                         {s} — ₦{services[s].Price?.toLocaleString()}

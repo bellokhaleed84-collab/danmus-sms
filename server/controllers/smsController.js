@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Transaction = require("../models/Transaction");
+const ServiceControl = require("../models/ServiceControl");
 const axios = require("axios");
 
 const FIVESIM_API = "https://5sim.net/v1";
@@ -173,6 +174,17 @@ const buySMS = async (req, res) => {
     }
 
     const user = await User.findById(req.user._id);
+
+    // Check if this service or its providers are locked
+    const lockedItems = await ServiceControl.find({ locked: true });
+    const lockedKeys = lockedItems.map((item) => item.key.toLowerCase());
+
+    if (lockedKeys.includes(service.toLowerCase())) {
+      return res.status(400).json({
+        message: `${service} is currently unavailable. Please try another service.`,
+      });
+    }
+
     const smsCost = Number(price);
 
     if (user.balance < smsCost) {
@@ -182,8 +194,8 @@ const buySMS = async (req, res) => {
     let order = null;
     let usedProvider = null;
 
-    // Try 5sim first (unless product was from Grizzly)
-    if (provider !== "grizzly") {
+    // Try 5sim first (unless product was from Grizzly, or 5sim is locked)
+    if (provider !== "grizzly" && !lockedKeys.includes("5sim")) {
       try {
         const fivesimResponse = await axios.get(
           `${FIVESIM_API}/user/buy/activation/${country}/any/${service}`,
@@ -219,6 +231,12 @@ const buySMS = async (req, res) => {
 
     // Fallback to Grizzly SMS
     if (!order) {
+      if (lockedKeys.includes("grizzly")) {
+        return res.status(400).json({
+          message: "No numbers available right now. Please try a different country or service.",
+        });
+      }
+
       console.log("Trying Grizzly SMS...");
       const grizzlyResponse = await axios.get(GRIZZLY_API, {
         params: {

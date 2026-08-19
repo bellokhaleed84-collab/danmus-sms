@@ -145,34 +145,13 @@ const getProducts = async (req, res) => {
       console.log("5sim products failed:", error.message);
     }
 
-    // ── Grizzly (Provider 3) — per-service call, since bulk returns BAD_ACTION ──
+    // ── Grizzly (Provider 3) — getPrices returns BAD_ACTION on this account,
+    // confirmed even with service param included. Skip bulk pricing entirely;
+    // list as available with checkout pricing, same as SMSPool.
     for (const slug of GRIZZLY_SERVICES) {
-      try {
-        const response = await axios.get(GRIZZLY_API, {
-          params: {
-            api_key: process.env.GRIZZLY_API_KEY,
-            action: "getPrices",
-            country,   // plain slug, e.g. "usa" — same as your working buy call
-            service: slug, // plain slug, e.g. "whatsapp" — same as your working buy call
-          },
-          timeout: 5000,
-        });
-        console.log(`Grizzly getPrices(${slug}) raw:`, JSON.stringify(response.data).slice(0, 500));
-        const data = response.data;
-        if (data && typeof data === "object" && !Array.isArray(data)) {
-          const countryBlock = data[country] || Object.values(data)[0];
-          const serviceBlock = countryBlock?.[slug] || countryBlock;
-          if (serviceBlock && serviceBlock.cost != null) {
-            addEntry(slug, "grizzly", null, serviceBlock.count || 0); // price confirmed at checkout for now
-          }
-        } else {
-          console.log(`Grizzly getPrices(${slug}) unexpected response:`, data);
-        }
-      } catch (error) {
-        console.log(`Grizzly price check failed for ${slug}:`, error.message);
-      }
+      addEntry(slug, "grizzly", null, 1);
     }
-    console.log("Grizzly products fetched ✅ (per-service)");
+    console.log("Grizzly listed ✅ (checkout pricing — getPrices unsupported on this account)");
 
     // ── SMSPool (Provider 1) — shown as available with checkout pricing ──
     // We no longer guess a bulk price. Availability is treated as "try at checkout";
@@ -285,6 +264,21 @@ const buySMS = async (req, res) => {
 
     // ── Grizzly ──
     if (provider === "grizzly") {
+      // getPrices is broken (BAD_ACTION) on this account — get real cost by
+      // diffing balance before/after instead, using the standard getBalance action.
+      let balanceBefore = null;
+      try {
+        const balResp = await axios.get(GRIZZLY_API, {
+          params: { api_key: process.env.GRIZZLY_API_KEY, action: "getBalance" },
+          timeout: 5000,
+        });
+        console.log("Grizzly balance before:", balResp.data);
+        const match = String(balResp.data).match(/ACCESS_BALANCE:([\d.]+)/);
+        balanceBefore = match ? Number(match[1]) : null;
+      } catch (balError) {
+        console.log("Grizzly getBalance (before) failed:", balError.message);
+      }
+
       const response = await axios.get(GRIZZLY_API, {
         params: {
           api_key: process.env.GRIZZLY_API_KEY,
@@ -299,25 +293,24 @@ const buySMS = async (req, res) => {
       if (parsed.status !== "ACCESS_NUMBER") {
         return res.status(400).json({ message: "Provider 3 has no numbers available right now." });
       }
-      // Grizzly's stub doesn't return cost on buy — fetch it via the
-      // per-service price check we already know works for listing.
+
       let grizzlyUsdCost = null;
-      try {
-        const priceResp = await axios.get(GRIZZLY_API, {
-          params: {
-            api_key: process.env.GRIZZLY_API_KEY,
-            action: "getPrices",
-            country,
-            service,
-          },
-          timeout: 5000,
-        });
-        console.log("Grizzly post-buy price raw:", JSON.stringify(priceResp.data).slice(0, 500));
-        const countryBlock = priceResp.data?.[country] || Object.values(priceResp.data || {})[0];
-        const serviceBlock = countryBlock?.[service] || countryBlock;
-        grizzlyUsdCost = serviceBlock?.cost != null ? Number(serviceBlock.cost) : null;
-      } catch (priceError) {
-        console.log("Grizzly post-buy price lookup failed:", priceError.message);
+      if (balanceBefore != null) {
+        try {
+          const balResp2 = await axios.get(GRIZZLY_API, {
+            params: { api_key: process.env.GRIZZLY_API_KEY, action: "getBalance" },
+            timeout: 5000,
+          });
+          console.log("Grizzly balance after:", balResp2.data);
+          const match2 = String(balResp2.data).match(/ACCESS_BALANCE:([\d.]+)/);
+          const balanceAfter = match2 ? Number(match2[1]) : null;
+          if (balanceAfter != null) {
+            const diff = balanceBefore - balanceAfter;
+            if (diff > 0) grizzlyUsdCost = diff;
+          }
+        } catch (balError) {
+          console.log("Grizzly getBalance (after) failed:", balError.message);
+        }
       }
       if (grizzlyUsdCost == null) {
         // Refuse to guess — cancel this order rather than charge an unknown amount.

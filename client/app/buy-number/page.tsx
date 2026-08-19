@@ -9,7 +9,7 @@ type ProviderKey = "smspool" | "fivesim" | "grizzly";
 
 type ProviderEntry = {
   label: string;
-  price: number;
+  price: number | null; // null = price confirmed at checkout, not shown upfront
   qty: number;
 };
 
@@ -104,7 +104,7 @@ export default function BuyNumberPage() {
     setPrice(null);
   }, [service]);
 
-  function selectProvider(providerKey: ProviderKey, providerPrice: number) {
+  function selectProvider(providerKey: ProviderKey, providerPrice: number | null) {
     setSelectedProvider(providerKey);
     setPrice(providerPrice);
   }
@@ -334,7 +334,7 @@ export default function BuyNumberPage() {
                       >
                         <p className="font-bold">{entry!.label || PROVIDER_FALLBACK_LABELS[p]}</p>
                         <p className="text-xl font-bold text-blue-500 mt-1">
-                          ₦{entry!.price.toLocaleString()}
+                          {entry!.price != null ? `₦${entry!.price.toLocaleString()}` : "Confirmed at checkout"}
                         </p>
                       </button>
                     );
@@ -350,7 +350,11 @@ export default function BuyNumberPage() {
                   <p className="text-gray-400 mt-2">Price may vary based on availability</p>
                 </div>
                 <h2 className="text-2xl md:text-5xl font-bold text-blue-500">
-                  {price ? `₦${price.toLocaleString()}` : "Select options"}
+                  {selectedProvider
+                    ? price != null
+                      ? `₦${price.toLocaleString()}`
+                      : "Confirmed at checkout"
+                    : "Select options"}
                 </h2>
               </div>
             </div>

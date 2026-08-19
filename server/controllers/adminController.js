@@ -151,13 +151,14 @@ const adjustUserBalance = async (req, res) => {
 // ── GET ALL SERVICE CONTROLS ──────────────────
 const getServiceControls = async (req, res) => {
   try {
-    const defaults = [
+        const defaults = [
       { key: "whatsapp", type: "service", label: "WhatsApp" },
       { key: "telegram", type: "service", label: "Telegram" },
       { key: "google", type: "service", label: "Google" },
       { key: "facebook", type: "service", label: "Facebook" },
       { key: "tiktok", type: "service", label: "TikTok" },
       { key: "instagram", type: "service", label: "Instagram" },
+      { key: "smspool", type: "provider", label: "SMSPool Provider" },
       { key: "5sim", type: "provider", label: "5sim Provider" },
       { key: "grizzly", type: "provider", label: "Grizzly SMS Provider" },
     ];

@@ -50,9 +50,8 @@ async function getUsdToNgnRate() {
   const now = Date.now();
   if (cachedRate && now - cachedAt < ONE_HOUR) return cachedRate;
   try {
-    // FIXED URL — frankfurter.app (not frankfurter.dev/v2)
     const response = await axios.get(
-      "https://api.frankfurter.app/latest?from=USD&to=NGN"
+      "https://open.er-api.com/v6/latest/USD"
     );
     cachedRate = response.data.rates.NGN;
     cachedAt = now;

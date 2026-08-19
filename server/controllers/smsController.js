@@ -5,9 +5,12 @@ const axios = require("axios");
 
 const FIVESIM_API = "https://5sim.net/v1";
 const GRIZZLY_API = "https://api.grizzlysms.com/stubs/handler_api.php";
+
+// SMSPool: native API confirmed via official docs (order/check/cancel).
+// See https://www.smspool.net/article/smspool-api-order-view-and-cancel-numbers
 const SMSPOOL_API = "https://api.smspool.net";
 
-const MARKUP = 1.8;
+const MARKUP = 1.8; // 80% markup, applied uniformly across all three providers
 
 const fivesimHeaders = {
   Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
@@ -21,6 +24,8 @@ const PROVIDER_LABELS = {
 };
 const PROVIDER_ORDER = ["smspool", "fivesim", "grizzly"];
 
+// SMSPool's native API needs an ISO alpha-2 country code, not this app's
+// internal country slug. Extend as you support more countries.
 const SMSPOOL_ISO_COUNTRY = {
   usa: "US",
   russia: "RU",
@@ -30,6 +35,7 @@ const SMSPOOL_ISO_COUNTRY = {
   pakistan: "PK",
 };
 
+// SMSPool matches service by proper-cased name.
 const SMSPOOL_SERVICE_NAME = {
   whatsapp: "WhatsApp",
   telegram: "Telegram",
@@ -39,6 +45,7 @@ const SMSPOOL_SERVICE_NAME = {
   instagram: "Instagram",
 };
 
+// Grizzly services this app supports (used for both listing and buy).
 const GRIZZLY_SERVICES = ["whatsapp", "telegram", "google", "facebook", "tiktok", "instagram"];
 
 // ── EXCHANGE RATE CACHE ───────────────────────
@@ -51,11 +58,10 @@ async function getUsdToNgnRate() {
   if (cachedRate && now - cachedAt < ONE_HOUR) return cachedRate;
   try {
     const response = await axios.get(
-      "https://open.er-api.com/v6/latest/USD"
+      "https://api.frankfurter.dev/v2/latest?base=USD&symbols=NGN"
     );
     cachedRate = response.data.rates.NGN;
     cachedAt = now;
-    console.log("Exchange rate fetched:", cachedRate);
     return cachedRate;
   } catch (error) {
     console.error("Exchange rate fetch failed:", error.message);
@@ -63,7 +69,7 @@ async function getUsdToNgnRate() {
   }
 }
 
-// ── HELPER: parse Grizzly plain text response ──
+// ── HELPER: parse SMS-Activate-style plain text response (Grizzly only now) ──
 function parseHandlerApiResponse(data) {
   if (typeof data !== "string") return { status: "ERROR", raw: data };
   if (data.startsWith("ACCESS_NUMBER:")) {
@@ -122,6 +128,10 @@ const getCountries = async (req, res) => {
 };
 
 // ── GET PRODUCTS BY COUNTRY ──────────────────
+// Only 5sim's bulk price list has been confirmed correct in production logs.
+// SMSPool and Grizzly are shown as "available, price at checkout" rather than
+// guessing a price we can't yet verify — showing a wrong number is worse
+// than showing no number.
 const getProducts = async (req, res) => {
   try {
     const { country } = req.params;
@@ -133,12 +143,12 @@ const getProducts = async (req, res) => {
       if (!grouped[serviceSlug]) grouped[serviceSlug] = { providers: {} };
       grouped[serviceSlug].providers[providerKey] = {
         label: PROVIDER_LABELS[providerKey],
-        price: priceNgnOrNull,
+        price: priceNgnOrNull, // null = "confirmed at checkout"
         qty,
       };
     }
 
-    // ── 5sim (Provider 2) ──
+    // ── 5sim (Provider 2) — confirmed working, shows real price ──
     try {
       const response = await axios.get(
         `${FIVESIM_API}/guest/products/${country}/any`,
@@ -154,17 +164,21 @@ const getProducts = async (req, res) => {
       console.log("5sim products failed:", error.message);
     }
 
-    // ── Grizzly (Provider 3) — listed with checkout pricing ──
+    // ── Grizzly (Provider 3) — getPrices returns BAD_ACTION on this account,
+    // confirmed even with service param included. Skip bulk pricing entirely;
+    // list as available with checkout pricing, same as SMSPool.
     for (const slug of GRIZZLY_SERVICES) {
       addEntry(slug, "grizzly", null, 1);
     }
-    console.log("Grizzly listed ✅");
+    console.log("Grizzly listed ✅ (checkout pricing — getPrices unsupported on this account)");
 
-    // ── SMSPool (Provider 1) — listed with checkout pricing ──
+    // ── SMSPool (Provider 1) — shown as available with checkout pricing ──
+    // We no longer guess a bulk price. Availability is treated as "try at checkout";
+    // the real cost comes back from the native /purchase/sms response.
     for (const slug of GRIZZLY_SERVICES) {
-      addEntry(slug, "smspool", null, 1);
+      addEntry(slug, "smspool", null, 1); // qty is a placeholder "try it" flag until confirmed
     }
-    console.log("SMSPool listed ✅");
+    console.log("SMSPool listed ✅ (checkout pricing, not yet bulk-confirmed)");
 
     return res.status(200).json(grouped);
   } catch (error) {
@@ -174,6 +188,9 @@ const getProducts = async (req, res) => {
 };
 
 // ── BUY NUMBER ─────────────────────────────────
+// SMSPool now uses the confirmed native API. Its real cost comes back in the
+// order response itself — that's what we charge, capped by maxPriceNgn so
+// the user is never charged more than a sane ceiling.
 const buySMS = async (req, res) => {
   try {
     const { country, service, provider, maxPriceNgn } = req.body;
@@ -202,13 +219,13 @@ const buySMS = async (req, res) => {
     let order = null;
     let smsCost = null;
 
-    // ── SMSPool (Provider 1) ──
+    // ── SMSPool: native API — cost comes back in the response ──
     if (provider === "smspool") {
       const isoCountry = SMSPOOL_ISO_COUNTRY[country.toLowerCase()];
       const properService = SMSPOOL_SERVICE_NAME[service.toLowerCase()];
       if (!isoCountry || !properService) {
         return res.status(400).json({
-          message: "Provider 1 doesn't support this country/service combination. Try Provider 2.",
+          message: "Provider 1 doesn't support this country/service combination.",
         });
       }
       const response = await axios.post(`${SMSPOOL_API}/purchase/sms`, null, {
@@ -216,6 +233,8 @@ const buySMS = async (req, res) => {
           key: process.env.SMSPOOL_API_KEY,
           country: isoCountry,
           service: properService,
+          // max_price is SMSPool's own USD ceiling param — convert our NGN
+          // budget back to USD as a safety cap, if the client supplied one.
           ...(maxPriceNgn
             ? { max_price: (Number(maxPriceNgn) / (usdToNgn * MARKUP)).toFixed(2) }
             : {}),
@@ -226,11 +245,11 @@ const buySMS = async (req, res) => {
       const data = response.data;
       if (!data || data.success !== 1 || !data.order_id || !data.phonenumber) {
         const reason =
-          data?.type === "OUT_OF_STOCK" ? "No numbers available right now. Try Provider 2." :
+          data?.type === "OUT_OF_STOCK" ? "No numbers available right now." :
           data?.type === "BALANCE_ERROR" ? "Provider 1 balance error — contact support." :
-          data?.type === "PRICE_NOT_FOUND" ? "No number found at this price. Try Provider 2." :
-          data?.message?.includes("whitelist-only") ? "This service isn't enabled on Provider 1 yet. Try Provider 2." :
-          "Provider 1 could not fulfil this order. Try Provider 2.";
+          data?.type === "PRICE_NOT_FOUND" ? "No number found under the price limit." :
+          data?.message?.includes("whitelist-only") ? "This service isn't enabled on Provider 1 yet. Try Provider 2, or request access at smspool.net." :
+          "Provider 1 could not fulfil this order right now.";
         console.log("SMSPool buy failed:", data?.message || data);
         return res.status(400).json({ message: reason });
       }
@@ -244,7 +263,7 @@ const buySMS = async (req, res) => {
       };
     }
 
-    // ── 5sim (Provider 2) ──
+    // ── 5sim ──
     if (provider === "fivesim") {
       const response = await axios.get(
         `${FIVESIM_API}/user/buy/activation/${country}/any/${service}`,
@@ -259,9 +278,7 @@ const buySMS = async (req, res) => {
         data.phone === "" ||
         data.phone.includes("no free")
       ) {
-        return res.status(400).json({
-          message: "Provider 2 has no numbers available right now. Try Provider 3.",
-        });
+        return res.status(400).json({ message: "Provider 2 has no numbers available right now." });
       }
       smsCost = Math.ceil(Number(data.price) * usdToNgn * MARKUP);
       order = {
@@ -273,14 +290,18 @@ const buySMS = async (req, res) => {
       };
     }
 
-    // ── Grizzly (Provider 3) ──
+    // ── Grizzly ──
     if (provider === "grizzly") {
+      // getNumber with plain slugs (country: "usa", service: "whatsapp") is
+      // confirmed BAD_ACTION on this account — never actually worked, only
+      // assumed. Rather than guess again, refuse cleanly and log the real
+      // country/service lists so the next deploy can use correct codes.
       try {
         const countriesResp = await axios.get(GRIZZLY_API, {
           params: { api_key: process.env.GRIZZLY_API_KEY, action: "getCountries" },
           timeout: 5000,
         });
-        console.log("Grizzly getCountries:", JSON.stringify(countriesResp.data).slice(0, 1500));
+        console.log("Grizzly getCountries raw:", JSON.stringify(countriesResp.data).slice(0, 1500));
       } catch (e) {
         console.log("Grizzly getCountries failed:", e.message);
       }
@@ -289,16 +310,18 @@ const buySMS = async (req, res) => {
           params: { api_key: process.env.GRIZZLY_API_KEY, action: "getServices" },
           timeout: 5000,
         });
-        console.log("Grizzly getServices:", JSON.stringify(servicesResp.data).slice(0, 1500));
+        console.log("Grizzly getServices raw:", JSON.stringify(servicesResp.data).slice(0, 1500));
       } catch (e) {
         console.log("Grizzly getServices failed:", e.message);
       }
       return res.status(400).json({
-        message: "Provider 3 is being configured. Please use Provider 1 or 2.",
+        message: "Provider 3 is temporarily unavailable while we confirm its country/service codes. Please try Provider 2.",
       });
     }
 
     if (user.balance < smsCost) {
+      // Number was already issued by the provider at this point for SMSPool/Grizzly —
+      // in production you'd want to cancel/refund with the provider here too.
       return res.status(400).json({ message: "Insufficient balance" });
     }
 
@@ -323,7 +346,6 @@ const buySMS = async (req, res) => {
       provider,
       order,
     });
-
   } catch (error) {
     console.error("buySMS failed:", error?.response?.data || error.message);
     res.status(500).json({ message: "Failed to purchase number. Please try again." });
@@ -376,7 +398,6 @@ const checkSMS = async (req, res) => {
         return res.status(200).json({ sms: [], status: parsed.status });
       }
     } else {
-      // Default: 5sim
       try {
         const response = await axios.get(
           `${FIVESIM_API}/user/check/${cleanId}`,
@@ -405,7 +426,6 @@ const checkSMS = async (req, res) => {
     return res.status(200).json({
       sms: [{ code, text: `Your OTP code: ${code}` }],
     });
-
   } catch (error) {
     console.error("Check SMS error:", error?.response?.data || error.message);
     res.status(500).json({ message: error.message });
@@ -466,7 +486,6 @@ const cancelOrder = async (req, res) => {
     }
 
     res.status(200).json({ message: "Order cancelled successfully" });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

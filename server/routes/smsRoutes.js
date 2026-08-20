@@ -1,7 +1,7 @@
 const express = require("express");
 const {
-  getCountries,
-  getProducts,
+  getProviderCountries,
+  getProviderProducts,
   buySMS,
   checkSMS,
   cancelOrder,
@@ -12,8 +12,8 @@ const { protect } = require("../middleware/authMiddleware");
 const router = express.Router();
 
 // Guest routes — no login needed
-router.get("/countries", getCountries);
-router.get("/products/:country", getProducts);
+router.get("/:provider/countries", getProviderCountries);
+router.get("/:provider/products/:country", getProviderProducts);
 
 // Protected routes — login required
 router.post("/buy", protect, buySMS);

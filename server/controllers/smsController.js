@@ -5,50 +5,29 @@ const axios = require("axios");
 
 const FIVESIM_API = "https://5sim.net/v1";
 const GRIZZLY_API = "https://api.grizzlysms.com/stubs/handler_api.php";
-
-// SMSPool: native API confirmed via official docs (order/check/cancel).
-// See https://www.smspool.net/article/smspool-api-order-view-and-cancel-numbers
 const SMSPOOL_API = "https://api.smspool.net";
-
-const MARKUP = 1.8; // 80% markup, applied uniformly across all three providers
+const MARKUP = 1.8;
 
 const fivesimHeaders = {
   Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
   Accept: "application/json",
 };
 
-const PROVIDER_LABELS = {
-  smspool: "Provider 1",
-  fivesim: "Provider 2",
-  grizzly: "Provider 3",
-};
+const PROVIDER_LABELS = { smspool: "Provider 1", fivesim: "Provider 2", grizzly: "Provider 3" };
 const PROVIDER_ORDER = ["smspool", "fivesim", "grizzly"];
 
-// SMSPool's native API needs an ISO alpha-2 country code, not this app's
-// internal country slug. Extend as you support more countries.
-const SMSPOOL_ISO_COUNTRY = {
-  usa: "US",
-  russia: "RU",
-  kazakhstan: "KZ",
-  thailand: "TH",
-  mexico: "MX",
-  pakistan: "PK",
+// Grizzly has no working service-list action (getServices = BAD_ACTION).
+// This is our curated list using standard SMS-Activate-family short codes.
+// If a code is wrong, that specific service will fail at buy time — logged.
+const GRIZZLY_SERVICES = {
+  whatsapp: "wa",
+  telegram: "tg",
+  google: "go",
+  facebook: "fb",
+  tiktok: "lf",
+  instagram: "ig",
 };
 
-// SMSPool matches service by proper-cased name.
-const SMSPOOL_SERVICE_NAME = {
-  whatsapp: "WhatsApp",
-  telegram: "Telegram",
-  google: "Google",
-  facebook: "Facebook",
-  tiktok: "TikTok",
-  instagram: "Instagram",
-};
-
-// Grizzly services this app supports (used for both listing and buy).
-const GRIZZLY_SERVICES = ["whatsapp", "telegram", "google", "facebook", "tiktok", "instagram"];
-
-// ── EXCHANGE RATE CACHE ───────────────────────
 let cachedRate = null;
 let cachedAt = 0;
 const ONE_HOUR = 60 * 60 * 1000;
@@ -57,9 +36,7 @@ async function getUsdToNgnRate() {
   const now = Date.now();
   if (cachedRate && now - cachedAt < ONE_HOUR) return cachedRate;
   try {
-    const response = await axios.get(
-      "https://api.frankfurter.dev/v2/latest?base=USD&symbols=NGN"
-    );
+    const response = await axios.get("https://api.frankfurter.dev/v2/latest?base=USD&symbols=NGN");
     cachedRate = response.data.rates.NGN;
     cachedAt = now;
     return cachedRate;
@@ -69,188 +46,188 @@ async function getUsdToNgnRate() {
   }
 }
 
-// ── HELPER: parse SMS-Activate-style plain text response (Grizzly only now) ──
 function parseHandlerApiResponse(data) {
   if (typeof data !== "string") return { status: "ERROR", raw: data };
   if (data.startsWith("ACCESS_NUMBER:")) {
     const parts = data.split(":");
     return { status: "ACCESS_NUMBER", id: parts[1], phone: parts[2] };
   }
-  if (data.startsWith("STATUS_OK:")) {
-    return { status: "STATUS_OK", code: data.split(":")[1] };
-  }
+  if (data.startsWith("STATUS_OK:")) return { status: "STATUS_OK", code: data.split(":")[1] };
   if (data.startsWith("STATUS_WAIT_CODE")) return { status: "STATUS_WAIT_CODE" };
   if (data.startsWith("STATUS_CANCEL")) return { status: "STATUS_CANCEL" };
   return { status: data };
 }
 
-// ── GET COUNTRIES ─────────────────────────────
-const getCountries = async (req, res) => {
+// ── PROVIDER-SCOPED COUNTRIES ─────────────────
+// Each provider returns ITS OWN real country identifiers. The frontend
+// stores whatever value comes back here and sends it straight through to
+// buy — no translation between provider ID systems, ever.
+const getProviderCountries = async (req, res) => {
+  const { provider } = req.params;
   try {
-    const response = await axios.get(`${FIVESIM_API}/guest/countries`, {
-      headers: fivesimHeaders,
-      timeout: 5000,
-    });
-    return res.status(200).json(response.data);
+    if (provider === "fivesim") {
+      try {
+        const response = await axios.get(`${FIVESIM_API}/guest/countries`, {
+          headers: fivesimHeaders,
+          timeout: 5000,
+        });
+        const list = Object.keys(response.data).map((slug) => ({
+          value: slug,
+          label: response.data[slug].text_en || slug,
+        }));
+        return res.status(200).json(list);
+      } catch {
+        return res.status(200).json([
+          { value: "usa", label: "United States" },
+          { value: "russia", label: "Russia" },
+          { value: "nigeria", label: "Nigeria" },
+          { value: "kenya", label: "Kenya" },
+          { value: "ghana", label: "Ghana" },
+          { value: "pakistan", label: "Pakistan" },
+          { value: "india", label: "India" },
+          { value: "indonesia", label: "Indonesia" },
+          { value: "philippines", label: "Philippines" },
+          { value: "mexico", label: "Mexico" },
+        ]);
+      }
+    }
+
+    if (provider === "grizzly") {
+      const response = await axios.get(GRIZZLY_API, {
+        params: { api_key: process.env.GRIZZLY_API_KEY, action: "getCountries" },
+        timeout: 5000,
+      });
+      const countries = response.data;
+      if (!countries || typeof countries !== "object") {
+        console.log("Grizzly getCountries unexpected:", countries);
+        return res.status(200).json([]);
+      }
+      const list = Object.values(countries)
+        .filter((c) => c && c.visible !== 0)
+        .map((c) => ({ value: String(c.id), label: c.eng || String(c.id) }));
+      return res.status(200).json(list);
+    }
+
+    if (provider === "smspool") {
+      const response = await axios.get(`${SMSPOOL_API}/country/retrieve_all`, {
+        params: { key: process.env.SMSPOOL_API_KEY },
+        timeout: 5000,
+      });
+      console.log("SMSPool country/retrieve_all raw:", JSON.stringify(response.data).slice(0, 800));
+      const data = response.data;
+      const arr = Array.isArray(data) ? data : Object.values(data || {});
+      const list = arr
+        .map((c) => ({
+          value: c.ID ?? c.id ?? c.short_name ?? c.code,
+          label: c.name ?? c.country ?? String(c.ID ?? c.id ?? ""),
+        }))
+        .filter((c) => c.value != null && c.label);
+      return res.status(200).json(list);
+    }
+
+    return res.status(400).json({ message: "Unknown provider" });
   } catch (error) {
-    console.log("5sim countries failed, using static list");
-    const countries = {
-      russia: { text_en: "Russia" },
-      ukraine: { text_en: "Ukraine" },
-      usa: { text_en: "United States" },
-      england: { text_en: "United Kingdom" },
-      china: { text_en: "China" },
-      india: { text_en: "India" },
-      indonesia: { text_en: "Indonesia" },
-      philippines: { text_en: "Philippines" },
-      brazil: { text_en: "Brazil" },
-      kenya: { text_en: "Kenya" },
-      ghana: { text_en: "Ghana" },
-      nigeria: { text_en: "Nigeria" },
-      egypt: { text_en: "Egypt" },
-      pakistan: { text_en: "Pakistan" },
-      bangladesh: { text_en: "Bangladesh" },
-      vietnam: { text_en: "Vietnam" },
-      thailand: { text_en: "Thailand" },
-      malaysia: { text_en: "Malaysia" },
-      myanmar: { text_en: "Myanmar" },
-      ethiopia: { text_en: "Ethiopia" },
-      tanzania: { text_en: "Tanzania" },
-      colombia: { text_en: "Colombia" },
-      mexico: { text_en: "Mexico" },
-      kazakhstan: { text_en: "Kazakhstan" },
-      uzbekistan: { text_en: "Uzbekistan" },
-      cambodia: { text_en: "Cambodia" },
-      nepal: { text_en: "Nepal" },
-    };
-    return res.status(200).json(countries);
+    console.error(`getProviderCountries(${provider}) failed:`, error.message);
+    return res.status(200).json([]); // fail soft — UI just shows "no countries"
   }
 };
 
-// ── GET PRODUCTS BY COUNTRY ──────────────────
-// Only 5sim's bulk price list has been confirmed correct in production logs.
-// SMSPool and Grizzly are shown as "available, price at checkout" rather than
-// guessing a price we can't yet verify — showing a wrong number is worse
-// than showing no number.
-const getProducts = async (req, res) => {
+// ── PROVIDER-SCOPED PRODUCTS/SERVICES ─────────
+const getProviderProducts = async (req, res) => {
+  const { provider, country } = req.params;
   try {
-    const { country } = req.params;
     const usdToNgn = await getUsdToNgnRate();
-    const grouped = {};
 
-    function addEntry(serviceSlug, providerKey, priceNgnOrNull, qty) {
-      if (!qty || qty <= 0) return;
-      if (!grouped[serviceSlug]) grouped[serviceSlug] = { providers: {} };
-      grouped[serviceSlug].providers[providerKey] = {
-        label: PROVIDER_LABELS[providerKey],
-        price: priceNgnOrNull, // null = "confirmed at checkout"
-        qty,
-      };
-    }
-
-    // ── 5sim (Provider 2) — confirmed working, shows real price ──
-    try {
-      const response = await axios.get(
-        `${FIVESIM_API}/guest/products/${country}/any`,
-        { headers: fivesimHeaders, timeout: 5000 }
-      );
-      Object.keys(response.data).forEach((service) => {
-        const p = response.data[service];
-        const ngnPrice = Math.ceil(p.Price * usdToNgn * MARKUP);
-        addEntry(service, "fivesim", ngnPrice, p.Qty || 0);
+    if (provider === "fivesim") {
+      const response = await axios.get(`${FIVESIM_API}/guest/products/${country}/any`, {
+        headers: fivesimHeaders,
+        timeout: 5000,
       });
-      console.log("5sim products fetched ✅");
-    } catch (error) {
-      console.log("5sim products failed:", error.message);
+      const list = Object.keys(response.data)
+        .filter((s) => response.data[s].Qty > 0)
+        .map((s) => ({
+          value: s,
+          label: s,
+          price: Math.ceil(response.data[s].Price * usdToNgn * MARKUP),
+          qty: response.data[s].Qty,
+        }));
+      return res.status(200).json(list);
     }
 
-    // ── Grizzly (Provider 3) — getPrices returns BAD_ACTION on this account,
-    // confirmed even with service param included. Skip bulk pricing entirely;
-    // list as available with checkout pricing, same as SMSPool.
-    for (const slug of GRIZZLY_SERVICES) {
-      addEntry(slug, "grizzly", null, 1);
+    if (provider === "grizzly") {
+      // No live service catalog available — curated list, checkout pricing.
+      const list = Object.keys(GRIZZLY_SERVICES).map((slug) => ({
+        value: slug,
+        label: slug,
+        price: null,
+        qty: 1,
+      }));
+      return res.status(200).json(list);
     }
-    console.log("Grizzly listed ✅ (checkout pricing — getPrices unsupported on this account)");
 
-    // ── SMSPool (Provider 1) — shown as available with checkout pricing ──
-    // We no longer guess a bulk price. Availability is treated as "try at checkout";
-    // the real cost comes back from the native /purchase/sms response.
-    for (const slug of GRIZZLY_SERVICES) {
-      addEntry(slug, "smspool", null, 1); // qty is a placeholder "try it" flag until confirmed
+    if (provider === "smspool") {
+      const response = await axios.get(`${SMSPOOL_API}/service/retrieve_all`, {
+        params: { key: process.env.SMSPOOL_API_KEY, country },
+        timeout: 5000,
+      });
+      console.log("SMSPool service/retrieve_all raw:", JSON.stringify(response.data).slice(0, 800));
+      const data = response.data;
+      const arr = Array.isArray(data) ? data : Object.values(data || {});
+      const list = arr
+        .map((s) => ({
+          value: s.ID ?? s.id ?? s.name,
+          label: s.name ?? String(s.ID ?? s.id ?? ""),
+          price: null, // checkout pricing until confirmed
+          qty: 1,
+        }))
+        .filter((s) => s.value != null && s.label);
+      return res.status(200).json(list);
     }
-    console.log("SMSPool listed ✅ (checkout pricing, not yet bulk-confirmed)");
 
-    return res.status(200).json(grouped);
+    return res.status(400).json({ message: "Unknown provider" });
   } catch (error) {
-    console.error("Products fetch failed:", error.message);
-    res.status(500).json({ message: "Service temporarily unavailable. Please try again." });
+    console.error(`getProviderProducts(${provider}, ${country}) failed:`, error.message);
+    return res.status(200).json([]);
   }
 };
 
 // ── BUY NUMBER ─────────────────────────────────
-// SMSPool now uses the confirmed native API. Its real cost comes back in the
-// order response itself — that's what we charge, capped by maxPriceNgn so
-// the user is never charged more than a sane ceiling.
+// country/service now arrive already in the chosen provider's own native
+// format (picked from that provider's own live list) — no translation.
 const buySMS = async (req, res) => {
   try {
-    const { country, service, provider, maxPriceNgn } = req.body;
+    const { country, service, provider } = req.body;
 
     if (!country || !service || !provider) {
-      return res.status(400).json({
-        message: "Country, service and provider are required",
-      });
+      return res.status(400).json({ message: "Country, service and provider are required" });
     }
     if (!PROVIDER_ORDER.includes(provider)) {
       return res.status(400).json({ message: "Invalid provider selected" });
     }
 
     const user = await User.findById(req.user._id);
-
     const lockedItems = await ServiceControl.find({ locked: true });
     const lockedKeys = lockedItems.map((item) => item.key.toLowerCase());
-
-    if (lockedKeys.includes(service.toLowerCase()) || lockedKeys.includes(provider)) {
-      return res.status(400).json({
-        message: `${PROVIDER_LABELS[provider]} is currently unavailable for ${service}. Please try another option.`,
-      });
+    if (lockedKeys.includes(provider)) {
+      return res.status(400).json({ message: `${PROVIDER_LABELS[provider]} is currently unavailable.` });
     }
 
     const usdToNgn = await getUsdToNgnRate();
     let order = null;
     let smsCost = null;
 
-    // ── SMSPool: native API — cost comes back in the response ──
     if (provider === "smspool") {
-      const isoCountry = SMSPOOL_ISO_COUNTRY[country.toLowerCase()];
-      const properService = SMSPOOL_SERVICE_NAME[service.toLowerCase()];
-      if (!isoCountry || !properService) {
-        return res.status(400).json({
-          message: "Provider 1 doesn't support this country/service combination.",
-        });
-      }
       const response = await axios.post(`${SMSPOOL_API}/purchase/sms`, null, {
-        params: {
-          key: process.env.SMSPOOL_API_KEY,
-          country: isoCountry,
-          service: properService,
-          // max_price is SMSPool's own USD ceiling param — convert our NGN
-          // budget back to USD as a safety cap, if the client supplied one.
-          ...(maxPriceNgn
-            ? { max_price: (Number(maxPriceNgn) / (usdToNgn * MARKUP)).toFixed(2) }
-            : {}),
-        },
+        params: { key: process.env.SMSPOOL_API_KEY, country, service },
         timeout: 8000,
       });
       console.log("SMSPool buy response:", response.data);
       const data = response.data;
       if (!data || data.success !== 1 || !data.order_id || !data.phonenumber) {
         const reason =
-          data?.type === "OUT_OF_STOCK" ? "No numbers available right now." :
-          data?.type === "BALANCE_ERROR" ? "Provider 1 balance error — contact support." :
-          data?.type === "PRICE_NOT_FOUND" ? "No number found under the price limit." :
-          data?.message?.includes("whitelist-only") ? "This service isn't enabled on Provider 1 yet. Try Provider 2, or request access at smspool.net." :
-          "Provider 1 could not fulfil this order right now.";
-        console.log("SMSPool buy failed:", data?.message || data);
+          data?.message?.includes("whitelist-only")
+            ? "This service isn't enabled on Provider 1 yet. Try another provider."
+            : data?.errors?.[0]?.message || "Provider 1 could not fulfil this order right now.";
         return res.status(400).json({ message: reason });
       }
       smsCost = Math.ceil(Number(data.cost) * usdToNgn * MARKUP);
@@ -263,65 +240,74 @@ const buySMS = async (req, res) => {
       };
     }
 
-    // ── 5sim ──
     if (provider === "fivesim") {
-      const response = await axios.get(
-        `${FIVESIM_API}/user/buy/activation/${country}/any/${service}`,
-        { headers: fivesimHeaders, timeout: 8000 }
-      );
+      const response = await axios.get(`${FIVESIM_API}/user/buy/activation/${country}/any/${service}`, {
+        headers: fivesimHeaders,
+        timeout: 8000,
+      });
       const data = response.data;
       console.log("5sim buy response:", data);
-      if (
-        !data ||
-        !data.id ||
-        !data.phone ||
-        data.phone === "" ||
-        data.phone.includes("no free")
-      ) {
+      if (!data?.id || !data?.phone || data.phone === "" || data.phone.includes("no free")) {
         return res.status(400).json({ message: "Provider 2 has no numbers available right now." });
       }
       smsCost = Math.ceil(Number(data.price) * usdToNgn * MARKUP);
-      order = {
-        id: String(data.id),
-        phone: data.phone,
-        country: data.country,
-        service: data.product,
-        price: smsCost,
-      };
+      order = { id: String(data.id), phone: data.phone, country: data.country, service: data.product, price: smsCost };
     }
 
-    // ── Grizzly ──
     if (provider === "grizzly") {
-      // getNumber with plain slugs (country: "usa", service: "whatsapp") is
-      // confirmed BAD_ACTION on this account — never actually worked, only
-      // assumed. Rather than guess again, refuse cleanly and log the real
-      // country/service lists so the next deploy can use correct codes.
+      const code = GRIZZLY_SERVICES[service.toLowerCase()] || service;
+
+      let balanceBefore = null;
       try {
-        const countriesResp = await axios.get(GRIZZLY_API, {
-          params: { api_key: process.env.GRIZZLY_API_KEY, action: "getCountries" },
+        const balResp = await axios.get(GRIZZLY_API, {
+          params: { api_key: process.env.GRIZZLY_API_KEY, action: "getBalance" },
           timeout: 5000,
         });
-        console.log("Grizzly getCountries raw:", JSON.stringify(countriesResp.data).slice(0, 1500));
+        const match = String(balResp.data).match(/ACCESS_BALANCE:([\d.]+)/);
+        balanceBefore = match ? Number(match[1]) : null;
       } catch (e) {
-        console.log("Grizzly getCountries failed:", e.message);
+        console.log("Grizzly getBalance (before) failed:", e.message);
       }
-      try {
-        const servicesResp = await axios.get(GRIZZLY_API, {
-          params: { api_key: process.env.GRIZZLY_API_KEY, action: "getServices" },
-          timeout: 5000,
-        });
-        console.log("Grizzly getServices raw:", JSON.stringify(servicesResp.data).slice(0, 1500));
-      } catch (e) {
-        console.log("Grizzly getServices failed:", e.message);
-      }
-      return res.status(400).json({
-        message: "Provider 3 is temporarily unavailable while we confirm its country/service codes. Please try Provider 2.",
+
+      const response = await axios.get(GRIZZLY_API, {
+        params: { api_key: process.env.GRIZZLY_API_KEY, action: "getNumber", service: code, country },
+        timeout: 8000,
       });
+      console.log(`Grizzly buy response (country=${country}, service=${code}):`, response.data);
+      const parsed = parseHandlerApiResponse(response.data);
+      if (parsed.status !== "ACCESS_NUMBER") {
+        return res.status(400).json({ message: "Provider 3 has no numbers available right now for this selection." });
+      }
+
+      let grizzlyUsdCost = null;
+      if (balanceBefore != null) {
+        try {
+          const balResp2 = await axios.get(GRIZZLY_API, {
+            params: { api_key: process.env.GRIZZLY_API_KEY, action: "getBalance" },
+            timeout: 5000,
+          });
+          const match2 = String(balResp2.data).match(/ACCESS_BALANCE:([\d.]+)/);
+          const balanceAfter = match2 ? Number(match2[1]) : null;
+          if (balanceAfter != null) {
+            const diff = balanceBefore - balanceAfter;
+            if (diff > 0) grizzlyUsdCost = diff;
+          }
+        } catch (e) {
+          console.log("Grizzly getBalance (after) failed:", e.message);
+        }
+      }
+
+      if (grizzlyUsdCost == null) {
+        await axios
+          .get(GRIZZLY_API, { params: { api_key: process.env.GRIZZLY_API_KEY, action: "setStatus", id: parsed.id, status: 8 } })
+          .catch(() => {});
+        return res.status(500).json({ message: "Could not confirm price for Provider 3. Please try again." });
+      }
+      smsCost = Math.ceil(grizzlyUsdCost * usdToNgn * MARKUP);
+      order = { id: parsed.id, phone: parsed.phone, country, service, price: smsCost };
     }
 
     if (user.balance < smsCost) {
-      // Number was already issued by the provider at this point for SMSPool/Grizzly —
-      // in production you'd want to cancel/refund with the provider here too.
       return res.status(400).json({ message: "Insufficient balance" });
     }
 
@@ -340,12 +326,7 @@ const buySMS = async (req, res) => {
       service: order.service,
     });
 
-    res.status(200).json({
-      message: "Number purchased successfully",
-      balance: user.balance,
-      provider,
-      order,
-    });
+    res.status(200).json({ message: "Number purchased successfully", balance: user.balance, provider, order });
   } catch (error) {
     console.error("buySMS failed:", error?.response?.data || error.message);
     res.status(500).json({ message: "Failed to purchase number. Please try again." });
@@ -357,75 +338,38 @@ const checkSMS = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { provider } = req.query;
-
     if (!orderId || orderId === "undefined") {
       return res.status(400).json({ message: "Invalid order ID" });
     }
-
-    const cleanId = orderId
-      .replace("grizzly:", "")
-      .replace("5sim:", "")
-      .replace("fivesim:", "")
-      .replace("smspool:", "");
-
+    const cleanId = orderId.replace("grizzly:", "").replace("5sim:", "").replace("fivesim:", "").replace("smspool:", "");
     let code = null;
 
-    if (provider === "smspool" || orderId.startsWith("smspool:")) {
+    if (provider === "smspool") {
       const response = await axios.post(`${SMSPOOL_API}/sms/check`, null, {
         params: { key: process.env.SMSPOOL_API_KEY, orderid: cleanId },
         timeout: 8000,
       });
-      console.log("SMSPool check response:", response.data);
       const data = response.data;
-      if (data?.status === 3 && data.sms) {
-        code = data.sms;
-      } else {
-        return res.status(200).json({ sms: [], status: data?.status ?? "PENDING" });
-      }
-    } else if (provider === "grizzly" || orderId.startsWith("grizzly:")) {
+      if (data?.status === 3 && data.sms) code = data.sms;
+      else return res.status(200).json({ sms: [], status: data?.status ?? "PENDING" });
+    } else if (provider === "grizzly") {
       const response = await axios.get(GRIZZLY_API, {
-        params: {
-          api_key: process.env.GRIZZLY_API_KEY,
-          action: "getStatus",
-          id: cleanId,
-        },
+        params: { api_key: process.env.GRIZZLY_API_KEY, action: "getStatus", id: cleanId },
       });
-      console.log("Grizzly check response:", response.data);
       const parsed = parseHandlerApiResponse(response.data);
-      if (parsed.status === "STATUS_OK") {
-        code = parsed.code;
-      } else {
-        return res.status(200).json({ sms: [], status: parsed.status });
-      }
+      if (parsed.status === "STATUS_OK") code = parsed.code;
+      else return res.status(200).json({ sms: [], status: parsed.status });
     } else {
-      try {
-        const response = await axios.get(
-          `${FIVESIM_API}/user/check/${cleanId}`,
-          { headers: fivesimHeaders, timeout: 5000 }
-        );
-        console.log("5sim check response:", response.data);
-        const sms = response.data.sms || [];
-        if (sms.length > 0) {
-          code = sms[0].code;
-        } else {
-          return res.status(200).json(response.data);
-        }
-      } catch (fivesimError) {
-        console.log("5sim check failed:", fivesimError.message);
-        return res.status(500).json({ message: "Failed to check SMS status." });
-      }
+      const response = await axios.get(`${FIVESIM_API}/user/check/${cleanId}`, { headers: fivesimHeaders, timeout: 5000 });
+      const sms = response.data.sms || [];
+      if (sms.length > 0) code = sms[0].code;
+      else return res.status(200).json(response.data);
     }
 
     if (code) {
-      await Transaction.findOneAndUpdate(
-        { paymentReference: { $regex: cleanId } },
-        { otp: code }
-      );
+      await Transaction.findOneAndUpdate({ paymentReference: { $regex: cleanId } }, { otp: code });
     }
-
-    return res.status(200).json({
-      sms: [{ code, text: `Your OTP code: ${code}` }],
-    });
+    return res.status(200).json({ sms: [{ code, text: `Your OTP code: ${code}` }] });
   } catch (error) {
     console.error("Check SMS error:", error?.response?.data || error.message);
     res.status(500).json({ message: error.message });
@@ -437,68 +381,43 @@ const cancelOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { provider } = req.query;
+    const cleanId = orderId.replace("grizzly:", "").replace("5sim:", "").replace("fivesim:", "").replace("smspool:", "");
 
-    const cleanId = orderId
-      .replace("grizzly:", "")
-      .replace("5sim:", "")
-      .replace("fivesim:", "")
-      .replace("smspool:", "");
-
-    if (provider === "smspool" || orderId.startsWith("smspool:")) {
+    if (provider === "smspool") {
       await axios.post(`${SMSPOOL_API}/sms/cancel`, null, {
         params: { key: process.env.SMSPOOL_API_KEY, orderid: cleanId },
         timeout: 8000,
       });
-    } else if (provider === "grizzly" || orderId.startsWith("grizzly:")) {
+    } else if (provider === "grizzly") {
       await axios.get(GRIZZLY_API, {
-        params: {
-          api_key: process.env.GRIZZLY_API_KEY,
-          action: "setStatus",
-          id: cleanId,
-          status: 8,
-        },
+        params: { api_key: process.env.GRIZZLY_API_KEY, action: "setStatus", id: cleanId, status: 8 },
       });
     } else {
       try {
-        await axios.get(`${FIVESIM_API}/user/cancel/${cleanId}`, {
-          headers: fivesimHeaders,
-          timeout: 5000,
-        });
-      } catch (fivesimError) {
-        console.log("5sim cancel failed:", fivesimError.message);
+        await axios.get(`${FIVESIM_API}/user/cancel/${cleanId}`, { headers: fivesimHeaders, timeout: 5000 });
+      } catch (e) {
+        console.log("5sim cancel failed:", e.message);
       }
     }
 
-    const transaction = await Transaction.findOne({
-      paymentReference: { $regex: cleanId },
-    });
-
+    const transaction = await Transaction.findOne({ paymentReference: { $regex: cleanId } });
     if (transaction) {
       const user = await User.findById(transaction.user);
       if (user) {
         user.balance += transaction.amount;
         await user.save();
-        return res.status(200).json({
-          message: "Order cancelled and balance refunded",
-          balance: user.balance,
-        });
+        return res.status(200).json({ message: "Order cancelled and balance refunded", balance: user.balance });
       }
     }
-
     res.status(200).json({ message: "Order cancelled successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// ── GET SMS HISTORY ────────────────────────────
 const getSmsHistory = async (req, res) => {
   try {
-    const transactions = await Transaction.find({
-      user: req.user._id,
-      type: "sms_purchase",
-    }).sort({ createdAt: -1 });
-
+    const transactions = await Transaction.find({ user: req.user._id, type: "sms_purchase" }).sort({ createdAt: -1 });
     res.status(200).json(transactions);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -506,8 +425,8 @@ const getSmsHistory = async (req, res) => {
 };
 
 module.exports = {
-  getCountries,
-  getProducts,
+  getProviderCountries,
+  getProviderProducts,
   buySMS,
   checkSMS,
   cancelOrder,

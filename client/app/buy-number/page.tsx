@@ -1,63 +1,50 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import MobileNav from "@/components/MobileNav";
 import API from "@/lib/api";
 
 type ProviderKey = "smspool" | "fivesim" | "grizzly";
 
-type ProviderEntry = {
+type Option = {
+  value: string;
   label: string;
-  price: number | null;
-  qty: number;
-};
-
-type ServiceEntry = {
-  providers: Partial<Record<ProviderKey, ProviderEntry>>;
+  price?: number | null;
+  qty?: number;
 };
 
 const PROVIDER_ORDER: ProviderKey[] = ["smspool", "fivesim", "grizzly"];
-const PROVIDER_FALLBACK_LABELS: Record<ProviderKey, string> = {
+const PROVIDER_LABELS: Record<ProviderKey, string> = {
   smspool: "Provider 1",
   fivesim: "Provider 2",
   grizzly: "Provider 3",
 };
 
-const PROVIDER_DESCRIPTIONS: Record<ProviderKey, string> = {
-  smspool: "Fast & reliable",
-  fivesim: "Wide coverage",
-  grizzly: "Best backup",
-};
-
 export default function BuyNumberPage() {
-  const [countries, setCountries] = useState<any>({});
-  const [services, setServices] = useState<Record<string, ServiceEntry>>({});
+  const [provider, setProvider] = useState<ProviderKey | null>(null);
+  const [countries, setCountries] = useState<Option[]>([]);
   const [country, setCountry] = useState("");
+  const [services, setServices] = useState<Option[]>([]);
   const [service, setService] = useState("");
-  const [selectedProvider, setSelectedProvider] = useState<ProviderKey | null>(null);
   const [price, setPrice] = useState<number | null>(null);
+
+  const [loadingCountries, setLoadingCountries] = useState(false);
+  const [loadingServices, setLoadingServices] = useState(false);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<any>(null);
   const [sms, setSms] = useState<any>(null);
   const [checking, setChecking] = useState(false);
-  const [lockedServices, setLockedServices] = useState<string[]>([]);
-  const orderRef = useRef<any>(null);
-  const smsRef = useRef<any>(null);
-
-  useEffect(() => { orderRef.current = order; }, [order]);
-  useEffect(() => { smsRef.current = sms; }, [sms]);
 
   useEffect(() => {
     async function fetchUser() {
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = await response.json();
         if (response.ok) setBalance(data.balance || 0);
       } catch (error) {
@@ -67,89 +54,74 @@ export default function BuyNumberPage() {
     fetchUser();
   }, []);
 
+  // When provider changes, reset everything below it and fetch that
+  // provider's own country list.
   useEffect(() => {
-    async function fetchCountries() {
-      try {
-        const res = await API.get("/sms/countries");
-        setCountries(res.data);
-      } catch (error) {
-        console.log(error);
-      }
-    }
-    fetchCountries();
-  }, []);
-
-  useEffect(() => {
-    async function fetchLocked() {
-      try {
-        const res = await API.get("/admin/locked-services");
-        setLockedServices(res.data.map((s: any) => s.key.toLowerCase()));
-      } catch (error) {
-        console.log(error);
-      }
-    }
-    fetchLocked();
-  }, []);
-
-  useEffect(() => {
-    if (!country) return;
+    setCountry("");
     setService("");
-    setSelectedProvider(null);
     setPrice(null);
-    async function fetchProducts() {
-      try {
-        const res = await API.get(`/sms/products/${country}`);
-        setServices(res.data);
-      } catch (error) {
-        console.log(error);
-        setServices({});
-      }
-    }
-    fetchProducts();
-  }, [country]);
+    setServices([]);
+    setCountries([]);
+    if (!provider) return;
+
+    setLoadingCountries(true);
+    API.get(`/sms/${provider}/countries`)
+      .then((res) => setCountries(res.data || []))
+      .catch((err) => {
+        console.log(err);
+        setCountries([]);
+      })
+      .finally(() => setLoadingCountries(false));
+  }, [provider]);
+
+  // When country changes, reset service/price and fetch that provider's
+  // own service list for that country.
+  useEffect(() => {
+    setService("");
+    setPrice(null);
+    setServices([]);
+    if (!provider || !country) return;
+
+    setLoadingServices(true);
+    API.get(`/sms/${provider}/products/${country}`)
+      .then((res) => setServices(res.data || []))
+      .catch((err) => {
+        console.log(err);
+        setServices([]);
+      })
+      .finally(() => setLoadingServices(false));
+  }, [provider, country]);
 
   useEffect(() => {
-    setSelectedProvider(null);
-    setPrice(null);
-  }, [service]);
-
-  function selectProvider(providerKey: ProviderKey, providerPrice: number | null) {
-    setSelectedProvider(providerKey);
-    setPrice(providerPrice);
-  }
+    if (!service) {
+      setPrice(null);
+      return;
+    }
+    const found = services.find((s) => s.value === service);
+    setPrice(found?.price ?? null);
+  }, [service, services]);
 
   async function handleBuyNumber() {
-    if (!country || !service || !selectedProvider) {
-      alert("Please select country, service and a provider");
+    if (!provider || !country || !service) {
+      alert("Please select provider, country and service");
+      return;
+    }
+    if (price !== null && balance < price) {
+      alert("Insufficient wallet balance");
       return;
     }
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/sms/buy`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            country,
-            service,
-            provider: selectedProvider,
-            price: price,
-          }),
-        }
-      );
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sms/buy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ provider, country, service }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      console.log("BUY RESPONSE:", data);
-      const newOrder = { ...data.order, provider: data.provider };
-      setOrder(newOrder);
-      orderRef.current = newOrder;
+      setOrder({ ...data.order, provider: data.provider });
       setSms(null);
-      smsRef.current = null;
       setBalance(data.balance);
     } catch (error: any) {
       alert(error.message || "Failed to buy number");
@@ -159,19 +131,11 @@ export default function BuyNumberPage() {
   }
 
   async function handleCheckSMS(silent = false) {
-    const currentOrder = orderRef.current;
-    if (!currentOrder?.id) return;
+    if (!order) return;
     if (!silent) setChecking(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/sms/check/${currentOrder.id}?provider=${currentOrder.provider}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const data = await res.json();
-      console.log("CHECK SMS:", data);
-      setSms(data);
-      smsRef.current = data;
+      const res = await API.get(`/sms/check/${order.id}?provider=${order.provider}`);
+      setSms(res.data);
     } catch (error: any) {
       if (!silent) alert("Failed to check SMS. Please try again.");
     } finally {
@@ -180,55 +144,26 @@ export default function BuyNumberPage() {
   }
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const currentOrder = orderRef.current;
-      const currentSms = smsRef.current;
-      if (!currentOrder?.id) return;
-      if (currentSms?.sms && currentSms.sms.length > 0) return;
-      handleCheckSMS(true);
-    }, 5000);
+    if (!order) return;
+    if (sms?.sms && sms.sms.length > 0) return;
+    const interval = setInterval(() => handleCheckSMS(true), 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [order, sms]);
 
-  async function handleCancel() {
-    const currentOrder = orderRef.current;
-    if (!currentOrder?.id) return;
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/sms/cancel/${currentOrder.id}?provider=${currentOrder.provider}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      alert("Order cancelled.");
-      setOrder(null);
-      orderRef.current = null;
-      setSms(null);
-      smsRef.current = null;
-      if (data.balance !== undefined) setBalance(data.balance);
-    } catch (error: any) {
-      alert(error.message || "Failed to cancel");
-    }
+  function startOver() {
+    setOrder(null);
+    setSms(null);
+    setProvider(null);
   }
-
-  const availableServiceKeys = Object.keys(services).filter((s) => {
-    if (lockedServices.includes(s.toLowerCase())) return false;
-    const providers = services[s]?.providers || {};
-    return Object.values(providers).some((p) => p && p.qty > 0);
-  });
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all duration-300">
-
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/20 blur-[120px] rounded-full" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 blur-[120px] rounded-full" />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
-
-        {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
           <div>
             <h1 className="text-2xl md:text-5xl font-bold">Buy Number</h1>
@@ -241,12 +176,9 @@ export default function BuyNumberPage() {
           </Link>
         </div>
 
-        {/* WALLET CARD */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-[32px] p-6 md:p-10 shadow-2xl text-white mb-10">
           <p className="text-lg opacity-80">Wallet Balance</p>
-          <h2 className="text-2xl md:text-6xl font-bold mt-4">
-            ₦{Number(balance).toLocaleString()}
-          </h2>
+          <h2 className="text-2xl md:text-6xl font-bold mt-4">₦{Number(balance).toLocaleString()}</h2>
           <div className="mt-8">
             <Link href="/add-funds">
               <button className="bg-white text-black hover:bg-gray-200 px-4 md:px-6 py-3 rounded-2xl font-semibold transition">
@@ -256,36 +188,26 @@ export default function BuyNumberPage() {
           </div>
         </div>
 
-        {/* ORDER RESULT */}
         {order ? (
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-[32px] p-6 md:p-10 shadow-2xl mb-10">
-            <h2 className="text-2xl font-bold mb-2 text-green-400">Number Purchased!</h2>
-            <p className="text-gray-400 text-sm mb-6">
-              via {PROVIDER_FALLBACK_LABELS[order.provider as ProviderKey] || order.provider}
-            </p>
-
+            <h2 className="text-2xl font-bold mb-6 text-green-400">Number Purchased!</h2>
             <div className="space-y-3 text-lg">
-              <p>
-                <span className="text-gray-400">Phone Number:</span>{" "}
-                <span className="font-bold text-blue-400 text-xl">{order.phone}</span>
-              </p>
+              <p><span className="text-gray-400">Phone Number:</span> <span className="font-bold text-blue-400">{order.phone}</span></p>
               <p><span className="text-gray-400">Service:</span> {order.service}</p>
               <p><span className="text-gray-400">Country:</span> {order.country}</p>
               <p><span className="text-gray-400">Price:</span> ₦{order.price?.toLocaleString()}</p>
             </div>
 
             {sms?.sms && sms.sms.length > 0 ? (
-              <div className="mt-6 bg-green-600/20 border border-green-600 rounded-2xl p-6">
-                <h3 className="text-green-400 font-bold text-xl mb-3">SMS Received!</h3>
-                <p className="text-4xl font-bold tracking-widest text-white">{sms.sms[0].code}</p>
-                <p className="text-gray-400 text-sm mt-2">{sms.sms[0].text}</p>
+              <div className="mt-6 bg-green-600/20 border border-green-600 rounded-2xl p-5">
+                <h3 className="text-green-400 font-bold text-xl mb-2">SMS Received!</h3>
+                <p className="text-2xl font-bold">{sms.sms[0].code}</p>
+                <p className="text-gray-400 text-sm mt-1">{sms.sms[0].text}</p>
               </div>
             ) : (
               <div className="mt-6 bg-yellow-600/20 border border-yellow-600 rounded-2xl p-5 flex items-center gap-3">
-                <div className="w-5 h-5 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin shrink-0" />
-                <p className="text-yellow-400 font-medium">
-                  Waiting for SMS... checking automatically every 5 seconds
-                </p>
+                <div className="w-5 h-5 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                <p className="text-yellow-400 font-medium">Waiting for SMS... we&apos;ll check automatically every few seconds</p>
               </div>
             )}
 
@@ -298,21 +220,42 @@ export default function BuyNumberPage() {
                 {checking ? "Checking..." : "Check SMS Now"}
               </button>
               <button
-                onClick={handleCancel}
-                className="flex-1 bg-red-600 hover:bg-red-700 py-4 rounded-2xl font-bold transition"
+                onClick={startOver}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 py-4 rounded-2xl font-bold transition"
               >
-                Cancel Order
+                Buy Another
               </button>
             </div>
           </div>
         ) : (
-
-          /* BUY CARD */
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-[32px] p-6 md:p-10 shadow-2xl">
             <h2 className="text-2xl md:text-3xl font-bold mb-8">Purchase Number</h2>
 
-            <div className="grid md:grid-cols-2 gap-5 md:px-8">
-              <div>
+            {/* STEP 1: Provider */}
+            <div>
+              <label className="block mb-3 text-lg font-semibold">Select Provider</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {PROVIDER_ORDER.map((p) => {
+                  const active = provider === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setProvider(p)}
+                      className={`rounded-2xl border p-5 text-left transition ${
+                        active ? "border-blue-500 bg-blue-600/10" : "border-[var(--border)] bg-[var(--input)] hover:border-blue-500/50"
+                      }`}
+                    >
+                      <p className="font-bold">{PROVIDER_LABELS[p]}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* STEP 2: Country (scoped to chosen provider) */}
+            {provider && (
+              <div className="mt-8">
                 <label htmlFor="country" className="block mb-3 text-lg font-semibold">
                   Select Country
                 </label>
@@ -320,18 +263,25 @@ export default function BuyNumberPage() {
                   id="country"
                   value={country}
                   onChange={(e) => setCountry(e.target.value)}
-                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500"
+                  disabled={loadingCountries}
+                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500 disabled:opacity-50"
                 >
-                  <option value="">Choose country</option>
-                  {Object.keys(countries).map((c) => (
-                    <option key={c} value={c}>
-                      {countries[c].text_en || c}
+                  <option value="">{loadingCountries ? "Loading..." : "Choose country"}</option>
+                  {countries.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
                     </option>
                   ))}
                 </select>
+                {!loadingCountries && countries.length === 0 && (
+                  <p className="text-sm text-gray-400 mt-2">No countries available for this provider right now.</p>
+                )}
               </div>
+            )}
 
-              <div>
+            {/* STEP 3: Service (scoped to chosen provider + country) */}
+            {provider && country && (
+              <div className="mt-8">
                 <label htmlFor="service" className="block mb-3 text-lg font-semibold">
                   Select Service
                 </label>
@@ -339,103 +289,45 @@ export default function BuyNumberPage() {
                   id="service"
                   value={service}
                   onChange={(e) => setService(e.target.value)}
-                  disabled={!country}
+                  disabled={loadingServices}
                   className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500 disabled:opacity-50"
                 >
-                  <option value="">Choose service</option>
-                  {availableServiceKeys.map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                  <option value="">{loadingServices ? "Loading..." : "Choose service"}</option>
+                  {services.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                      {s.price != null ? ` — ₦${s.price.toLocaleString()}` : " — price at checkout"}
+                    </option>
                   ))}
                 </select>
-              </div>
-            </div>
-
-            {/* PROVIDER CARDS */}
-            {service && services[service]?.providers && (
-              <div className="mt-10 md:px-8">
-                <label className="block mb-4 text-lg font-semibold">Choose Provider</label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {PROVIDER_ORDER.map((p) => {
-                    const entry = services[service].providers[p];
-                    const unavailable = !entry || entry.qty <= 0;
-                    const active = selectedProvider === p;
-                    const num = PROVIDER_ORDER.indexOf(p) + 1;
-
-                    if (unavailable) {
-                      return (
-                        <div
-                          key={p}
-                          className="rounded-2xl border border-[var(--border)] p-5 opacity-40 cursor-not-allowed"
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="w-7 h-7 rounded-full bg-gray-600 flex items-center justify-center text-sm font-bold">{num}</span>
-                            <p className="font-bold">{PROVIDER_FALLBACK_LABELS[p]}</p>
-                          </div>
-                          <p className="text-sm text-gray-500">{PROVIDER_DESCRIPTIONS[p]}</p>
-                          <p className="text-sm text-red-400 mt-2">Unavailable</p>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => selectProvider(p, entry!.price)}
-                        className={`rounded-2xl border p-5 text-left transition ${
-                          active
-                            ? "border-blue-500 bg-blue-600/10 shadow-lg shadow-blue-500/10"
-                            : "border-[var(--border)] bg-[var(--input)] hover:border-blue-500/50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${active ? "bg-blue-600" : "bg-[var(--border)]"}`}>{num}</span>
-                          <p className="font-bold">{entry!.label || PROVIDER_FALLBACK_LABELS[p]}</p>
-                          {active && <span className="ml-auto text-blue-400 text-xs font-semibold">SELECTED</span>}
-                        </div>
-                        <p className="text-xs text-gray-400 mb-3">{PROVIDER_DESCRIPTIONS[p]}</p>
-                        <p className="text-2xl font-bold text-blue-500">
-                          {entry!.price != null ? `₦${entry!.price.toLocaleString()}` : "Price at checkout"}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
+                {!loadingServices && services.length === 0 && (
+                  <p className="text-sm text-gray-400 mt-2">No services available for this country right now.</p>
+                )}
               </div>
             )}
 
-            {/* PRICE SUMMARY */}
             <div className="bg-[var(--input)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 mt-10">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                 <div>
                   <h3 className="text-2xl font-bold">Estimated Price</h3>
-                  <p className="text-gray-400 mt-2">
-                    {selectedProvider
-                      ? `Using ${PROVIDER_FALLBACK_LABELS[selectedProvider]}`
-                      : "Select a country, service and provider"}
-                  </p>
+                  <p className="text-gray-400 mt-2">Price may vary based on availability</p>
                 </div>
                 <h2 className="text-2xl md:text-5xl font-bold text-blue-500">
-                  {selectedProvider
-                    ? price != null
-                      ? `₦${price.toLocaleString()}`
-                      : "Confirmed at checkout"
-                    : "—"}
+                  {!service ? "Select options" : price != null ? `₦${price.toLocaleString()}` : "Confirmed at checkout"}
                 </h2>
               </div>
             </div>
 
             <button
               onClick={handleBuyNumber}
-              disabled={loading || !selectedProvider}
+              disabled={loading || !provider || !country || !service}
               className="w-full bg-blue-600 hover:bg-blue-700 py-5 rounded-2xl font-bold text-lg transition shadow-xl mt-10 disabled:opacity-50"
             >
-              {loading ? "Purchasing..." : `Buy with ${selectedProvider ? PROVIDER_FALLBACK_LABELS[selectedProvider] : "Selected Provider"}`}
+              {loading ? "Purchasing..." : "Buy Number"}
             </button>
           </div>
         )}
 
-        {/* FEATURES */}
         <div className="grid md:grid-cols-3 gap-6 mt-10">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
             <div className="text-5xl mb-5">⚡</div>
@@ -453,7 +345,6 @@ export default function BuyNumberPage() {
             <p className="text-gray-400 mt-3">Safe and reliable OTP services</p>
           </div>
         </div>
-
       </div>
 
       <MobileNav />

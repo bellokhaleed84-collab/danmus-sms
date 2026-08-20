@@ -33,6 +33,13 @@ const transactionSchema = new mongoose.Schema(
       type: String,
     },
 
+    // Prevents the same sms_purchase transaction from being refunded more
+    // than once (double-click, retry, or repeated cancel calls).
+    refunded: {
+      type: Boolean,
+      default: false,
+    },
+
     // ── STRUCTURED DETAILS (optional — populated going forward) ──
     phone: {
       type: String, // SMS purchases: the virtual number issued

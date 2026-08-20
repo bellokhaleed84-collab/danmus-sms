@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Transaction = require("../models/Transaction");
 const ServiceControl = require("../models/ServiceControl");
+const PriceCache = require("../models/PriceCache");
 const axios = require("axios");
 
 const FIVESIM_API = "https://5sim.net/v1";
@@ -167,13 +168,16 @@ const getProviderProducts = async (req, res) => {
     }
 
     if (provider === "grizzly") {
-      // No live service catalog available — curated list, checkout pricing.
+      // No live service catalog available — curated list. Show last-known
+      // real price if we have one for this country+service, else checkout pricing.
+      const cached = await PriceCache.find({ provider: "grizzly", country }).lean();
+      const cacheMap = Object.fromEntries(cached.map((c) => [c.service, c.priceNgn]));
       const list = Object.keys(GRIZZLY_SERVICES)
         .filter((slug) => notLocked(slug))
         .map((slug) => ({
           value: slug,
           label: slug,
-          price: null,
+          price: cacheMap[slug] ?? null,
           qty: 1,
         }));
       return res.status(200).json(list);
@@ -187,13 +191,20 @@ const getProviderProducts = async (req, res) => {
       console.log("SMSPool service/retrieve_all raw:", JSON.stringify(response.data).slice(0, 800));
       const data = response.data;
       const arr = Array.isArray(data) ? data : Object.values(data || {});
+
+      const cached = await PriceCache.find({ provider: "smspool", country }).lean();
+      const cacheMap = Object.fromEntries(cached.map((c) => [c.service, c.priceNgn]));
+
       const list = arr
-        .map((s) => ({
-          value: s.ID ?? s.id ?? s.name,
-          label: s.name ?? String(s.ID ?? s.id ?? ""),
-          price: null, // checkout pricing until confirmed
-          qty: 1,
-        }))
+        .map((s) => {
+          const value = s.ID ?? s.id ?? s.name;
+          return {
+            value,
+            label: s.name ?? String(s.ID ?? s.id ?? ""),
+            price: cacheMap[value] ?? null, // last real price if we have one, else checkout pricing
+            qty: 1,
+          };
+        })
         .filter((s) => s.value != null && s.label && notLocked(s.label));
       return res.status(200).json(list);
     }
@@ -257,6 +268,11 @@ const buySMS = async (req, res) => {
         service: data.service || service,
         price: smsCost,
       };
+      PriceCache.findOneAndUpdate(
+        { provider: "smspool", country, service },
+        { priceNgn: smsCost },
+        { upsert: true }
+      ).catch((e) => console.log("PriceCache save failed:", e.message));
     }
 
     if (provider === "fivesim") {
@@ -324,6 +340,11 @@ const buySMS = async (req, res) => {
       }
       smsCost = Math.ceil(grizzlyUsdCost * usdToNgn * MARKUP);
       order = { id: parsed.id, phone: parsed.phone, country, service, price: smsCost };
+      PriceCache.findOneAndUpdate(
+        { provider: "grizzly", country, service },
+        { priceNgn: smsCost },
+        { upsert: true }
+      ).catch((e) => console.log("PriceCache save failed:", e.message));
     }
 
     if (user.balance < smsCost) {
@@ -386,7 +407,8 @@ const checkSMS = async (req, res) => {
     }
 
     if (code) {
-      await Transaction.findOneAndUpdate({ paymentReference: { $regex: cleanId } }, { otp: code });
+      const exactRef = `${provider}:${cleanId}`;
+      await Transaction.findOneAndUpdate({ paymentReference: exactRef }, { otp: code });
     }
     return res.status(200).json({ sms: [{ code, text: `Your OTP code: ${code}` }] });
   } catch (error) {
@@ -419,7 +441,17 @@ const cancelOrder = async (req, res) => {
       }
     }
 
-    const transaction = await Transaction.findOne({ paymentReference: { $regex: cleanId } });
+    // Exact match (not regex) — regex on a bare ID risks matching another
+    // order's reference too. Atomic findOneAndUpdate guarded by
+    // refunded:false means two simultaneous cancel calls can never both
+    // succeed — only the request that actually flips the flag gets to credit.
+    const exactRef = `${provider}:${cleanId}`;
+    const transaction = await Transaction.findOneAndUpdate(
+      { paymentReference: exactRef, refunded: false },
+      { refunded: true },
+      { new: true }
+    );
+
     if (transaction) {
       const user = await User.findById(transaction.user);
       if (user) {

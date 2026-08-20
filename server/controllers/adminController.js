@@ -148,19 +148,37 @@ const adjustUserBalance = async (req, res) => {
   }
 };
 
+// ── SERVICE CONTROL DEFAULTS ──────────────────
+const PROVIDERS = [
+  { key: "smspool", label: "Provider 1 (SMSPool)" },
+  { key: "fivesim", label: "Provider 2 (5sim)" },
+  { key: "grizzly", label: "Provider 3 (Grizzly)" },
+];
+
+const SERVICES = [
+  { key: "whatsapp", label: "WhatsApp" },
+  { key: "telegram", label: "Telegram" },
+  { key: "google", label: "Google" },
+  { key: "facebook", label: "Facebook" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "instagram", label: "Instagram" },
+];
+
 // ── GET ALL SERVICE CONTROLS ──────────────────
 const getServiceControls = async (req, res) => {
   try {
-        const defaults = [
-      { key: "whatsapp", type: "service", label: "WhatsApp" },
-      { key: "telegram", type: "service", label: "Telegram" },
-      { key: "google", type: "service", label: "Google" },
-      { key: "facebook", type: "service", label: "Facebook" },
-      { key: "tiktok", type: "service", label: "TikTok" },
-      { key: "instagram", type: "service", label: "Instagram" },
-      { key: "smspool", type: "provider", label: "SMSPool Provider" },
-      { key: "5sim", type: "provider", label: "5sim Provider" },
-      { key: "grizzly", type: "provider", label: "Grizzly SMS Provider" },
+    const defaults = [
+      ...SERVICES.map((s) => ({ key: s.key, type: "service", label: s.label })),
+      ...PROVIDERS.map((p) => ({ key: p.key, type: "provider", label: p.label })),
+      // Per-provider service locks — e.g. lock WhatsApp on Provider 1 only,
+      // leave it open on Provider 2 and 3.
+      ...PROVIDERS.flatMap((p) =>
+        SERVICES.map((s) => ({
+          key: `${p.key}:${s.key}`,
+          type: "provider_service",
+          label: `${p.label} — ${s.label}`,
+        }))
+      ),
     ];
 
     for (const item of defaults) {

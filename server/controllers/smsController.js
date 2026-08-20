@@ -138,13 +138,25 @@ const getProviderProducts = async (req, res) => {
   try {
     const usdToNgn = await getUsdToNgnRate();
 
+    const lockedItems = await ServiceControl.find({ locked: true });
+    const lockedKeys = lockedItems.map((item) => item.key.toLowerCase());
+    if (lockedKeys.includes(provider)) {
+      return res.status(200).json([]); // whole provider locked
+    }
+    // Combo lock keyed on label (not the provider's own value format) so it
+    // works consistently across 5sim/Grizzly slugs and SMSPool's native names.
+    function notLocked(label) {
+      const l = label.toLowerCase();
+      return !lockedKeys.includes(l) && !lockedKeys.includes(`${provider}:${l}`);
+    }
+
     if (provider === "fivesim") {
       const response = await axios.get(`${FIVESIM_API}/guest/products/${country}/any`, {
         headers: fivesimHeaders,
         timeout: 5000,
       });
       const list = Object.keys(response.data)
-        .filter((s) => response.data[s].Qty > 0)
+        .filter((s) => response.data[s].Qty > 0 && notLocked(s))
         .map((s) => ({
           value: s,
           label: s,
@@ -156,12 +168,14 @@ const getProviderProducts = async (req, res) => {
 
     if (provider === "grizzly") {
       // No live service catalog available — curated list, checkout pricing.
-      const list = Object.keys(GRIZZLY_SERVICES).map((slug) => ({
-        value: slug,
-        label: slug,
-        price: null,
-        qty: 1,
-      }));
+      const list = Object.keys(GRIZZLY_SERVICES)
+        .filter((slug) => notLocked(slug))
+        .map((slug) => ({
+          value: slug,
+          label: slug,
+          price: null,
+          qty: 1,
+        }));
       return res.status(200).json(list);
     }
 
@@ -180,7 +194,7 @@ const getProviderProducts = async (req, res) => {
           price: null, // checkout pricing until confirmed
           qty: 1,
         }))
-        .filter((s) => s.value != null && s.label);
+        .filter((s) => s.value != null && s.label && notLocked(s.label));
       return res.status(200).json(list);
     }
 
@@ -208,8 +222,13 @@ const buySMS = async (req, res) => {
     const user = await User.findById(req.user._id);
     const lockedItems = await ServiceControl.find({ locked: true });
     const lockedKeys = lockedItems.map((item) => item.key.toLowerCase());
-    if (lockedKeys.includes(provider)) {
-      return res.status(400).json({ message: `${PROVIDER_LABELS[provider]} is currently unavailable.` });
+    // Secondary safety net — primary enforcement is at listing time (getProviderProducts),
+    // which filters by label and already keeps locked services out of the dropdown.
+    const comboKey = `${provider}:${service}`.toLowerCase();
+    if (lockedKeys.includes(provider) || lockedKeys.includes(comboKey)) {
+      return res.status(400).json({
+        message: `${service} on ${PROVIDER_LABELS[provider]} is currently unavailable.`,
+      });
     }
 
     const usdToNgn = await getUsdToNgnRate();

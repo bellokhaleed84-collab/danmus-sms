@@ -209,7 +209,7 @@ export default function AdminPage() {
         ? prompt("Reason for locking (optional):") || ""
         : "";
       const res = await API.patch(
-        `/admin/service-controls/${key}`,
+        `/admin/service-controls/${encodeURIComponent(key)}`,
         { locked: !currentlyLocked, reason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -862,39 +862,73 @@ export default function AdminPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            {serviceControls.map((control) => (
-              <div
-                key={control.key}
-                className={`border rounded-2xl p-4 ${
-                  control.locked
-                    ? "bg-red-500/10 border-red-500/40"
-                    : "bg-[var(--input)] border-[var(--border)]"
-                }`}
-              >
-                <p className="font-semibold text-sm truncate">{control.label}</p>
-                <p className="text-gray-500 text-[11px] mt-1 uppercase">{control.type}</p>
-                {control.locked && control.reason && (
-                  <p className="text-red-400 text-[11px] mt-2 truncate">{control.reason}</p>
-                )}
-                <button
-                  onClick={() => handleToggleService(control.key, control.locked)}
-                  disabled={controlLoading === control.key}
-                  className={`w-full mt-3 py-2 rounded-xl text-xs font-semibold transition ${
+          {(() => {
+            const providerControls = serviceControls.filter((c) => c.type === "provider");
+            const serviceOnlyControls = serviceControls.filter((c) => c.type === "service");
+            const comboControls = serviceControls.filter((c) => c.type === "provider_service");
+
+            function renderTile(control: any) {
+              return (
+                <div
+                  key={control.key}
+                  className={`border rounded-2xl p-4 ${
                     control.locked
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "bg-red-600 hover:bg-red-700"
+                      ? "bg-red-500/10 border-red-500/40"
+                      : "bg-[var(--input)] border-[var(--border)]"
                   }`}
                 >
-                  {controlLoading === control.key
-                    ? "..."
-                    : control.locked
-                    ? "Unlock"
-                    : "Lock"}
-                </button>
+                  <p className="font-semibold text-sm truncate">{control.label}</p>
+                  <p className="text-gray-500 text-[11px] mt-1 uppercase">{control.type.replace("_", " ")}</p>
+                  {control.locked && control.reason && (
+                    <p className="text-red-400 text-[11px] mt-2 truncate">{control.reason}</p>
+                  )}
+                  <button
+                    onClick={() => handleToggleService(control.key, control.locked)}
+                    disabled={controlLoading === control.key}
+                    className={`w-full mt-3 py-2 rounded-xl text-xs font-semibold transition ${
+                      control.locked ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+                    }`}
+                  >
+                    {controlLoading === control.key ? "..." : control.locked ? "Unlock" : "Lock"}
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-8">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 uppercase mb-3">Whole Providers</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                    {providerControls.map(renderTile)}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 uppercase mb-3">Services (all providers)</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                    {serviceOnlyControls.map(renderTile)}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 uppercase mb-3">Per-Provider Services</h3>
+                  {["smspool", "fivesim", "grizzly"].map((providerKey) => {
+                    const group = comboControls.filter((c) => c.key.startsWith(`${providerKey}:`));
+                    if (group.length === 0) return null;
+                    return (
+                      <div key={providerKey} className="mb-6">
+                        <p className="text-xs text-gray-500 mb-2">{group[0]?.label.split(" — ")[0]}</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                          {group.map(renderTile)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </div>
 
       </div>

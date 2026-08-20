@@ -9,7 +9,7 @@ const serviceControlSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["service", "provider"],
+      enum: ["service", "provider", "provider_service"],
       required: true,
     },
     label: {

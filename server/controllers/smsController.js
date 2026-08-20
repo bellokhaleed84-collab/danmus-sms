@@ -359,7 +359,7 @@ const buySMS = async (req, res) => {
       type: "sms_purchase",
       amount: smsCost,
       status: "successful",
-      description: `Virtual number for ${service} in ${country} via ${provider}`,
+      description: `Virtual number for ${service} in ${country}`,
       paymentReference: `${provider}:${order.id}`,
       phone: order.phone,
       country: order.country,

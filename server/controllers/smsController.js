@@ -17,9 +17,6 @@ const fivesimHeaders = {
 const PROVIDER_LABELS = { smspool: "Provider 1", fivesim: "Provider 2", grizzly: "Provider 3" };
 const PROVIDER_ORDER = ["smspool", "fivesim", "grizzly"];
 
-// Grizzly has no working service-list action (getServices = BAD_ACTION).
-// This is our curated list using standard SMS-Activate-family short codes.
-// If a code is wrong, that specific service will fail at buy time — logged.
 const GRIZZLY_SERVICES = {
   whatsapp: "wa",
   telegram: "tg",
@@ -59,38 +56,7 @@ function parseHandlerApiResponse(data) {
   return { status: data };
 }
 
-// ── SMSPOOL LIVE PRICE LOOKUP ──────────────────
-// SMSPool exposes a per-service/country price endpoint (documented as the
-// "price_endpoint" in their API docs, wrapped by third-party clients as
-// getSMSServicePrice(country, service)). Their public docs are only
-// browsable through a JS-rendered Postman collection, so the exact path
-// below (`request/price`) is inferred from their naming convention
-// (country/retrieve_all, service/retrieve_all, request/active) rather than
-// confirmed against a live response. VERIFY THIS PATH against a real
-// SMSPool API key / their Postman collection before relying on it in prod.
-// If it 404s or doesn't return a usable price, we silently fall back to
-// PriceCache exactly like before — nothing breaks either way.
-async function getSmspoolLivePrice(country, service) {
-  try {
-    const response = await axios.get(`${SMSPOOL_API}/request/price`, {
-      params: { key: process.env.SMSPOOL_API_KEY, country, service },
-      timeout: 4000,
-    });
-    const data = response.data;
-    // Response shape isn't confirmed — check a few plausible field names.
-    const raw = data?.price ?? data?.Price ?? data?.cost ?? null;
-    const price = raw != null ? Number(raw) : null;
-    return Number.isFinite(price) ? price : null;
-  } catch (error) {
-    console.log(`SMSPool live price lookup failed (${country}/${service}):`, error.message);
-    return null;
-  }
-}
-
 // ── PROVIDER-SCOPED COUNTRIES ─────────────────
-// Each provider returns ITS OWN real country identifiers. The frontend
-// stores whatever value comes back here and sends it straight through to
-// buy — no translation between provider ID systems, ever.
 const getProviderCountries = async (req, res) => {
   const { provider } = req.params;
   try {
@@ -142,7 +108,6 @@ const getProviderCountries = async (req, res) => {
         params: { key: process.env.SMSPOOL_API_KEY },
         timeout: 5000,
       });
-      console.log("SMSPool country/retrieve_all raw:", JSON.stringify(response.data).slice(0, 800));
       const data = response.data;
       const arr = Array.isArray(data) ? data : Object.values(data || {});
       const list = arr
@@ -157,11 +122,17 @@ const getProviderCountries = async (req, res) => {
     return res.status(400).json({ message: "Unknown provider" });
   } catch (error) {
     console.error(`getProviderCountries(${provider}) failed:`, error.message);
-    return res.status(200).json([]); // fail soft — UI just shows "no countries"
+    return res.status(200).json([]);
   }
 };
 
 // ── PROVIDER-SCOPED PRODUCTS/SERVICES ─────────
+// SMSPool/Grizzly show a cached "last real price" when we have one (seeded
+// by buySMS after an actual purchase), otherwise "price confirmed at
+// checkout". No per-service live-price network calls here — that guessed
+// endpoint (/request/price) isn't confirmed to exist and was causing both
+// slow loads (extra calls per service, each up to 4s) and missing prices
+// (silently failing for everything except cached combos).
 const getProviderProducts = async (req, res) => {
   const { provider, country } = req.params;
   try {
@@ -170,10 +141,8 @@ const getProviderProducts = async (req, res) => {
     const lockedItems = await ServiceControl.find({ locked: true });
     const lockedKeys = lockedItems.map((item) => item.key.toLowerCase());
     if (lockedKeys.includes(provider)) {
-      return res.status(200).json([]); // whole provider locked
+      return res.status(200).json([]);
     }
-    // Combo lock keyed on label (not the provider's own value format) so it
-    // works consistently across 5sim/Grizzly slugs and SMSPool's native names.
     function notLocked(label) {
       const l = label.toLowerCase();
       return !lockedKeys.includes(l) && !lockedKeys.includes(`${provider}:${l}`);
@@ -196,10 +165,6 @@ const getProviderProducts = async (req, res) => {
     }
 
     if (provider === "grizzly") {
-      // No live service catalog or price endpoint available — curated list.
-      // Show last-known real price if we have one for this country+service
-      // (seeded by buySMS via a balance-diff after purchase), else null and
-      // the frontend should show a "price confirmed at checkout" note.
       const cached = await PriceCache.find({ provider: "grizzly", country }).lean();
       const cacheMap = Object.fromEntries(cached.map((c) => [c.service, c.priceNgn]));
       const list = Object.keys(GRIZZLY_SERVICES)
@@ -218,38 +183,23 @@ const getProviderProducts = async (req, res) => {
         params: { key: process.env.SMSPOOL_API_KEY, country },
         timeout: 5000,
       });
-      console.log("SMSPool service/retrieve_all raw:", JSON.stringify(response.data).slice(0, 800));
       const data = response.data;
       const arr = Array.isArray(data) ? data : Object.values(data || {});
 
       const cached = await PriceCache.find({ provider: "smspool", country }).lean();
       const cacheMap = Object.fromEntries(cached.map((c) => [c.service, c.priceNgn]));
 
-      const services = arr
+      const list = arr
         .map((s) => {
           const value = s.ID ?? s.id ?? s.name;
           return {
             value,
             label: s.name ?? String(s.ID ?? s.id ?? ""),
+            price: cacheMap[value] ?? null,
             qty: 1,
           };
         })
         .filter((s) => s.value != null && s.label && notLocked(s.label));
-
-      // Try to get a real live price for every service on this screen, in
-      // parallel. Anything that fails (bad endpoint guess, rate limit,
-      // network hiccup) just falls back to the cached price like before.
-      const list = await Promise.all(
-        services.map(async (s) => {
-          const liveUsd = await getSmspoolLivePrice(country, s.value);
-          const price =
-            liveUsd != null
-              ? Math.ceil(liveUsd * usdToNgn * MARKUP)
-              : cacheMap[s.value] ?? null;
-          return { ...s, price };
-        })
-      );
-
       return res.status(200).json(list);
     }
 
@@ -261,8 +211,6 @@ const getProviderProducts = async (req, res) => {
 };
 
 // ── BUY NUMBER ─────────────────────────────────
-// country/service now arrive already in the chosen provider's own native
-// format (picked from that provider's own live list) — no translation.
 const buySMS = async (req, res) => {
   try {
     const { country, service, provider } = req.body;
@@ -277,8 +225,6 @@ const buySMS = async (req, res) => {
     const user = await User.findById(req.user._id);
     const lockedItems = await ServiceControl.find({ locked: true });
     const lockedKeys = lockedItems.map((item) => item.key.toLowerCase());
-    // Secondary safety net — primary enforcement is at listing time (getProviderProducts),
-    // which filters by label and already keeps locked services out of the dropdown.
     const comboKey = `${provider}:${service}`.toLowerCase();
     if (lockedKeys.includes(provider) || lockedKeys.includes(comboKey)) {
       return res.status(400).json({
@@ -485,10 +431,6 @@ const cancelOrder = async (req, res) => {
       }
     }
 
-    // Exact match (not regex) — regex on a bare ID risks matching another
-    // order's reference too. Atomic findOneAndUpdate guarded by
-    // refunded:false means two simultaneous cancel calls can never both
-    // succeed — only the request that actually flips the flag gets to credit.
     const exactRef = `${provider}:${cleanId}`;
     const transaction = await Transaction.findOneAndUpdate(
       { paymentReference: exactRef, refunded: false },

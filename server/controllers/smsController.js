@@ -59,6 +59,34 @@ function parseHandlerApiResponse(data) {
   return { status: data };
 }
 
+// ── SMSPOOL LIVE PRICE LOOKUP ──────────────────
+// SMSPool exposes a per-service/country price endpoint (documented as the
+// "price_endpoint" in their API docs, wrapped by third-party clients as
+// getSMSServicePrice(country, service)). Their public docs are only
+// browsable through a JS-rendered Postman collection, so the exact path
+// below (`request/price`) is inferred from their naming convention
+// (country/retrieve_all, service/retrieve_all, request/active) rather than
+// confirmed against a live response. VERIFY THIS PATH against a real
+// SMSPool API key / their Postman collection before relying on it in prod.
+// If it 404s or doesn't return a usable price, we silently fall back to
+// PriceCache exactly like before — nothing breaks either way.
+async function getSmspoolLivePrice(country, service) {
+  try {
+    const response = await axios.get(`${SMSPOOL_API}/request/price`, {
+      params: { key: process.env.SMSPOOL_API_KEY, country, service },
+      timeout: 4000,
+    });
+    const data = response.data;
+    // Response shape isn't confirmed — check a few plausible field names.
+    const raw = data?.price ?? data?.Price ?? data?.cost ?? null;
+    const price = raw != null ? Number(raw) : null;
+    return Number.isFinite(price) ? price : null;
+  } catch (error) {
+    console.log(`SMSPool live price lookup failed (${country}/${service}):`, error.message);
+    return null;
+  }
+}
+
 // ── PROVIDER-SCOPED COUNTRIES ─────────────────
 // Each provider returns ITS OWN real country identifiers. The frontend
 // stores whatever value comes back here and sends it straight through to
@@ -168,8 +196,10 @@ const getProviderProducts = async (req, res) => {
     }
 
     if (provider === "grizzly") {
-      // No live service catalog available — curated list. Show last-known
-      // real price if we have one for this country+service, else checkout pricing.
+      // No live service catalog or price endpoint available — curated list.
+      // Show last-known real price if we have one for this country+service
+      // (seeded by buySMS via a balance-diff after purchase), else null and
+      // the frontend should show a "price confirmed at checkout" note.
       const cached = await PriceCache.find({ provider: "grizzly", country }).lean();
       const cacheMap = Object.fromEntries(cached.map((c) => [c.service, c.priceNgn]));
       const list = Object.keys(GRIZZLY_SERVICES)
@@ -195,17 +225,31 @@ const getProviderProducts = async (req, res) => {
       const cached = await PriceCache.find({ provider: "smspool", country }).lean();
       const cacheMap = Object.fromEntries(cached.map((c) => [c.service, c.priceNgn]));
 
-      const list = arr
+      const services = arr
         .map((s) => {
           const value = s.ID ?? s.id ?? s.name;
           return {
             value,
             label: s.name ?? String(s.ID ?? s.id ?? ""),
-            price: cacheMap[value] ?? null, // last real price if we have one, else checkout pricing
             qty: 1,
           };
         })
         .filter((s) => s.value != null && s.label && notLocked(s.label));
+
+      // Try to get a real live price for every service on this screen, in
+      // parallel. Anything that fails (bad endpoint guess, rate limit,
+      // network hiccup) just falls back to the cached price like before.
+      const list = await Promise.all(
+        services.map(async (s) => {
+          const liveUsd = await getSmspoolLivePrice(country, s.value);
+          const price =
+            liveUsd != null
+              ? Math.ceil(liveUsd * usdToNgn * MARKUP)
+              : cacheMap[s.value] ?? null;
+          return { ...s, price };
+        })
+      );
+
       return res.status(200).json(list);
     }
 

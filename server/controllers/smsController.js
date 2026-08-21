@@ -185,14 +185,23 @@ const getCountries = async (req, res) => {
 };
 
 // ── GET PRODUCTS BY COUNTRY ──────────────────
+// ── GET PRODUCTS BY COUNTRY ──────────────────
 const getProducts = async (req, res) => {
   try {
     const { country } = req.params;
     const usdToNgn = await getUsdToNgnRate();
     const grouped = {};
 
+    // Only show these services — ones we actually support
+    const SUPPORTED_SERVICES = [
+      "whatsapp", "telegram", "google",
+      "facebook", "tiktok", "instagram",
+      "twitter", "discord",
+    ];
+
     function addEntry(serviceSlug, providerKey, priceNgnOrNull, qty) {
       if (!qty || qty <= 0) return;
+      if (!SUPPORTED_SERVICES.includes(serviceSlug.toLowerCase())) return;
       if (!grouped[serviceSlug]) grouped[serviceSlug] = { providers: {} };
       grouped[serviceSlug].providers[providerKey] = {
         label: PROVIDER_LABELS[providerKey],
@@ -217,25 +226,26 @@ const getProducts = async (req, res) => {
       console.log("5sim products failed:", error.message);
     }
 
-    // ── SMSPool (Provider 1) — fetch real prices per service ──
+    // ── SMSPool (Provider 1) — fetch real prices ──
     const isoCountry = SMSPOOL_ISO_COUNTRY[country.toLowerCase()];
     if (isoCountry) {
-      for (const slug of Object.keys(SMSPOOL_SERVICE_NAME)) {
+      for (const slug of SUPPORTED_SERVICES) {
         const serviceName = SMSPOOL_SERVICE_NAME[slug];
+        if (!serviceName) continue;
         const price = await getSmsPoolPrice(isoCountry, serviceName, usdToNgn);
         addEntry(slug, "smspool", price, 1);
       }
       console.log("SMSPool prices fetched ✅");
     } else {
-      // Country not supported by SMSPool — list with null price
-      for (const slug of GRIZZLY_SERVICES) {
+      for (const slug of SUPPORTED_SERVICES) {
+        if (!SMSPOOL_SERVICE_NAME[slug]) continue;
         addEntry(slug, "smspool", null, 1);
       }
-      console.log("SMSPool: country not mapped, listed with checkout pricing");
+      console.log("SMSPool: country not mapped, checkout pricing");
     }
 
-    // ── Grizzly (Provider 3) — listed with checkout pricing ──
-    for (const slug of GRIZZLY_SERVICES) {
+    // ── Grizzly (Provider 3) ──
+    for (const slug of SUPPORTED_SERVICES) {
       addEntry(slug, "grizzly", null, 1);
     }
     console.log("Grizzly listed ✅");
@@ -243,7 +253,7 @@ const getProducts = async (req, res) => {
     return res.status(200).json(grouped);
   } catch (error) {
     console.error("Products fetch failed:", error.message);
-    res.status(500).json({ message: "Service temporarily unavailable. Please try again." });
+    res.status(500).json({ message: "Service temporarily unavailable." });
   }
 };
 

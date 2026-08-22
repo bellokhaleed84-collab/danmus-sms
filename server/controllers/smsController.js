@@ -52,7 +52,8 @@ const SMSPOOL_ISO_COUNTRY = {
   england: "GB",
 };
 
-const SMSPOOL_SERVICE_NAME = {
+// Slug -> display label, shared across providers wherever a service is offered
+const SERVICE_LABELS = {
   whatsapp: "WhatsApp",
   telegram: "Telegram",
   google: "Google",
@@ -99,6 +100,17 @@ const STATIC_COUNTRIES = {
   nepal: { text_en: "Nepal" },
   netherlands: { text_en: "Netherlands" },
 };
+
+function capitalize(slug) {
+  return slug.charAt(0).toUpperCase() + slug.slice(1);
+}
+
+function countriesObjectToOptions(obj) {
+  return Object.keys(obj).map((slug) => ({
+    value: slug,
+    label: obj[slug]?.text_en || capitalize(slug),
+  }));
+}
 
 // ── EXCHANGE RATE CACHE ───────────────────────
 let cachedRate = null;
@@ -185,6 +197,7 @@ function isLockedForService(lockedKeys, provider, service) {
 
 // ── GET COUNTRIES (per provider) ──────────────
 // GET /:provider/countries
+// Returns a flat array: [{ value, label }]
 const getProviderCountries = async (req, res) => {
   try {
     const { provider } = req.params;
@@ -198,40 +211,24 @@ const getProviderCountries = async (req, res) => {
           headers: fivesimHeaders,
           timeout: 5000,
         });
-        return res.status(200).json({
-          provider,
-          label: PROVIDER_LABELS[provider],
-          countries: response.data,
-        });
+        return res.status(200).json(countriesObjectToOptions(response.data));
       } catch (error) {
         console.log("5sim countries failed, using static list:", error.message);
-        return res.status(200).json({
-          provider,
-          label: PROVIDER_LABELS[provider],
-          countries: STATIC_COUNTRIES,
-        });
+        return res.status(200).json(countriesObjectToOptions(STATIC_COUNTRIES));
       }
     }
 
     if (provider === "smspool") {
-      const countries = {};
+      const subset = {};
       Object.keys(SMSPOOL_ISO_COUNTRY).forEach((slug) => {
-        if (STATIC_COUNTRIES[slug]) countries[slug] = STATIC_COUNTRIES[slug];
+        if (STATIC_COUNTRIES[slug]) subset[slug] = STATIC_COUNTRIES[slug];
       });
-      return res.status(200).json({
-        provider,
-        label: PROVIDER_LABELS[provider],
-        countries,
-      });
+      return res.status(200).json(countriesObjectToOptions(subset));
     }
 
-    // grizzly — not live yet, flagged so the frontend can grey it out
-    return res.status(200).json({
-      provider,
-      label: PROVIDER_LABELS[provider],
-      comingSoon: true,
-      countries: STATIC_COUNTRIES,
-    });
+    // grizzly — not live yet, still list countries so the UI stays consistent;
+    // buySMS blocks the actual purchase with a clear "being configured" message.
+    return res.status(200).json(countriesObjectToOptions(STATIC_COUNTRIES));
   } catch (error) {
     console.error("getProviderCountries failed:", error.message);
     res.status(500).json({ message: "Service temporarily unavailable. Please try again." });
@@ -240,6 +237,7 @@ const getProviderCountries = async (req, res) => {
 
 // ── GET PRODUCTS (per provider + country) ─────
 // GET /:provider/products/:country
+// Returns a flat array: [{ value, label, price, qty }]
 const getProviderProducts = async (req, res) => {
   try {
     const { provider, country } = req.params;
@@ -248,7 +246,6 @@ const getProviderProducts = async (req, res) => {
     }
 
     const usdToNgn = await getUsdToNgnRate();
-    const services = {};
 
     if (provider === "fivesim") {
       try {
@@ -256,16 +253,15 @@ const getProviderProducts = async (req, res) => {
           `${FIVESIM_API}/guest/products/${country}/any`,
           { headers: fivesimHeaders, timeout: 5000 }
         );
-        Object.keys(response.data).forEach((slug) => {
-          const p = response.data[slug];
-          if (!p.Qty || p.Qty <= 0) return;
-          services[slug] = {
-            label: PROVIDER_LABELS[provider],
-            price: Math.ceil(p.Price * usdToNgn * MARKUP),
-            qty: p.Qty,
-          };
-        });
-        return res.status(200).json({ provider, country, services });
+        const options = Object.keys(response.data)
+          .filter((slug) => response.data[slug]?.Qty > 0)
+          .map((slug) => ({
+            value: slug,
+            label: SERVICE_LABELS[slug] || capitalize(slug),
+            price: Math.ceil(response.data[slug].Price * usdToNgn * MARKUP),
+            qty: response.data[slug].Qty,
+          }));
+        return res.status(200).json(options);
       } catch (error) {
         console.log(`getProviderProducts(fivesim, ${country}) failed:`, error.message);
         return res.status(400).json({
@@ -281,24 +277,23 @@ const getProviderProducts = async (req, res) => {
           message: "Provider 1 doesn't support this country.",
         });
       }
-      for (const slug of Object.keys(SMSPOOL_SERVICE_NAME)) {
-        const serviceName = SMSPOOL_SERVICE_NAME[slug];
-        const price = await getSmsPoolPrice(isoCountry, serviceName, usdToNgn);
-        services[slug] = { label: PROVIDER_LABELS[provider], price, qty: 1 };
+      const options = [];
+      for (const slug of Object.keys(SERVICE_LABELS)) {
+        const price = await getSmsPoolPrice(isoCountry, SERVICE_LABELS[slug], usdToNgn);
+        options.push({ value: slug, label: SERVICE_LABELS[slug], price, qty: 1 });
       }
-      return res.status(200).json({ provider, country, services });
+      return res.status(200).json(options);
     }
 
-    // grizzly — not live yet; flagged so the frontend can disable checkout
-    for (const slug of GRIZZLY_SERVICES) {
-      services[slug] = {
-        label: PROVIDER_LABELS[provider],
-        price: null,
-        qty: 1,
-        comingSoon: true,
-      };
-    }
-    return res.status(200).json({ provider, country, comingSoon: true, services });
+    // grizzly — not live yet; price stays null so the frontend shows
+    // "price at checkout" (already handled in the UI copy).
+    const options = GRIZZLY_SERVICES.map((slug) => ({
+      value: slug,
+      label: SERVICE_LABELS[slug] || capitalize(slug),
+      price: null,
+      qty: 1,
+    }));
+    return res.status(200).json(options);
   } catch (error) {
     console.error("getProviderProducts failed:", error.message);
     res.status(500).json({ message: "Service temporarily unavailable. Please try again." });
@@ -337,7 +332,7 @@ const buySMS = async (req, res) => {
     // ── SMSPool (Provider 1) ──
     if (provider === "smspool") {
       const isoCountry = SMSPOOL_ISO_COUNTRY[country.toLowerCase()];
-      const properService = SMSPOOL_SERVICE_NAME[service.toLowerCase()];
+      const properService = SERVICE_LABELS[service.toLowerCase()];
       if (!isoCountry || !properService) {
         return res.status(400).json({
           message: "Provider 1 doesn't support this country/service. Try Provider 2.",

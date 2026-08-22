@@ -21,11 +21,63 @@ const getPlatformStats = async (req, res) => {
     const totalUsers = await User.countDocuments();
 
     const totalRevenue = await Transaction.aggregate([
-      { $match: { status: "successful" } },
+      { $match: { status: "successful", type: "deposit" } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
 
     const totalTransactions = await Transaction.countDocuments();
+
+    // Total money currently sitting in all user wallets (a liability, not profit)
+    const walletAgg = await User.aggregate([
+      { $group: { _id: null, total: { $sum: "$balance" } } },
+    ]);
+    const totalWalletBalance = walletAgg[0]?.total || 0;
+
+    // Estimated profit from SMS sales. Prices are charged at cost * 1.8,
+    // so the profit share of what's charged is (1.8 - 1) / 1.8 ≈ 44.4%.
+    // This is an estimate since exact provider cost per sale isn't stored.
+    const MARKUP = 1.8;
+    const profitShare = (MARKUP - 1) / MARKUP;
+
+    const smsRevenueAgg = await Transaction.aggregate([
+      { $match: { status: "successful", type: "sms_purchase" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const smsRevenue = smsRevenueAgg[0]?.total || 0;
+    const estimatedProfit = Math.round(smsRevenue * profitShare);
+
+    // Most used provider, parsed from paymentReference like "fivesim:12345"
+    const providerAgg = await Transaction.aggregate([
+      { $match: { type: "sms_purchase", paymentReference: { $exists: true, $ne: null } } },
+      {
+        $project: {
+          provider: { $arrayElemAt: [{ $split: ["$paymentReference", ":"] }, 0] },
+        },
+      },
+      { $group: { _id: "$provider", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    const PROVIDER_LABELS = {
+      smspool: "SMSPool (Provider 1)",
+      fivesim: "5sim (Provider 2)",
+      "5sim": "5sim (Provider 2)",
+      grizzly: "Grizzly (Provider 3)",
+    };
+
+    const mostUsedProvider = providerAgg.length > 0
+      ? {
+          key: providerAgg[0]._id,
+          label: PROVIDER_LABELS[providerAgg[0]._id] || providerAgg[0]._id,
+          count: providerAgg[0].count,
+        }
+      : null;
+
+    const providerBreakdown = providerAgg.map((p) => ({
+      key: p._id,
+      label: PROVIDER_LABELS[p._id] || p._id,
+      count: p.count,
+    }));
 
     const recentUsers = await User.find()
       .select("-password")
@@ -36,6 +88,10 @@ const getPlatformStats = async (req, res) => {
       totalUsers,
       totalRevenue: totalRevenue[0]?.total || 0,
       totalTransactions,
+      totalWalletBalance,
+      estimatedProfit,
+      mostUsedProvider,
+      providerBreakdown,
       recentUsers,
     });
   } catch (error) {
@@ -170,8 +226,6 @@ const getServiceControls = async (req, res) => {
     const defaults = [
       ...SERVICES.map((s) => ({ key: s.key, type: "service", label: s.label })),
       ...PROVIDERS.map((p) => ({ key: p.key, type: "provider", label: p.label })),
-      // Per-provider service locks — e.g. lock WhatsApp on Provider 1 only,
-      // leave it open on Provider 2 and 3.
       ...PROVIDERS.flatMap((p) =>
         SERVICES.map((s) => ({
           key: `${p.key}:${s.key}`,

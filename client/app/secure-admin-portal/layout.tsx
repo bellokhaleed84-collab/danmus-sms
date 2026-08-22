@@ -6,10 +6,10 @@ import Link from "next/link";
 
 const NAV_ITEMS = [
   { href: "/secure-admin-portal", label: "Overview" },
-  { href: "/secure-admin-portal#users", label: "Users" },
-  { href: "/secure-admin-portal#transactions", label: "Transactions" },
-  { href: "/secure-admin-portal#listings", label: "Listings" },
-  { href: "/secure-admin-portal#service-controls", label: "Service Controls" },
+  { href: "/secure-admin-portal/users", label: "Users" },
+  { href: "/secure-admin-portal/transactions", label: "Transactions" },
+  { href: "/secure-admin-portal/listings", label: "Listings" },
+  { href: "/secure-admin-portal/service-controls", label: "Service Controls" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -52,14 +52,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       <div className="flex">
-        {/* SIDEBAR */}
         <aside className="hidden md:flex flex-col w-64 min-h-screen border-r border-[var(--border)] bg-[var(--card)]/70 backdrop-blur-2xl p-6">
           <h1 className="text-xl font-bold text-blue-500 mb-2">Admin</h1>
           <p className="text-gray-400 text-xs mb-8 truncate">{adminEmail}</p>
 
           <nav className="space-y-2 flex-1">
             {NAV_ITEMS.map((item) => {
-              const active = pathname === item.href.split("#")[0] && item.href === "/secure-admin-portal";
+              const active = pathname === item.href;
               return (
                 <Link key={item.href} href={item.href}>
                   <div
@@ -92,18 +91,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </aside>
 
-        {/* MOBILE TOP NAV */}
         <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-[var(--card)]/90 backdrop-blur-xl border-b border-[var(--border)] px-3 py-3 flex gap-2 overflow-x-auto">
-          {NAV_ITEMS.map((item) => (
-            <Link key={item.href} href={item.href}>
-              <div className="px-3 py-2 rounded-xl font-semibold text-xs whitespace-nowrap transition bg-[var(--input)] border border-[var(--border)]">
-                {item.label}
-              </div>
-            </Link>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link key={item.href} href={item.href}>
+                <div
+                  className={`px-3 py-2 rounded-xl font-semibold text-xs whitespace-nowrap transition ${
+                    active ? "bg-blue-600 text-white" : "bg-[var(--input)] border border-[var(--border)]"
+                  }`}
+                >
+                  {item.label}
+                </div>
+              </Link>
+            );
+          })}
         </div>
 
-        {/* MAIN CONTENT */}
         <div className="flex-1 p-4 sm:p-5 md:p-10 max-w-full overflow-hidden pt-16 md:pt-10">
           {children}
         </div>

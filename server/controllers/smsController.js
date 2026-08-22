@@ -52,7 +52,9 @@ const SMSPOOL_ISO_COUNTRY = {
   england: "GB",
 };
 
-// Slug -> display label, shared across providers wherever a service is offered
+// Slug -> display label, used by 5sim (Provider 2) and Grizzly (Provider 3),
+// whose APIs use fixed slugs. SMSPool (Provider 1) no longer uses this — it
+// pulls its own live service catalog per country instead (see below).
 const SERVICE_LABELS = {
   whatsapp: "WhatsApp",
   telegram: "Telegram",
@@ -112,6 +114,22 @@ function countriesObjectToOptions(obj) {
   }));
 }
 
+// Runs async fn(item) over items with at most `limit` in flight at once —
+// keeps us well under SMSPool's rate limit when pricing many services.
+async function mapWithConcurrency(items, limit, fn) {
+  const results = new Array(items.length);
+  let index = 0;
+  async function worker() {
+    while (index < items.length) {
+      const current = index++;
+      results[current] = await fn(items[current], current);
+    }
+  }
+  const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
+  await Promise.all(workers);
+  return results;
+}
+
 // ── EXCHANGE RATE CACHE ───────────────────────
 let cachedRate = null;
 let cachedAt = 0;
@@ -140,12 +158,30 @@ async function getUsdToNgnRate() {
   }
 }
 
+// ── SMSPool: live service catalog per country ──
+const smspoolServiceListCache = {};
+const SMSPOOL_SERVICE_LIST_TTL = 6 * 60 * 60 * 1000; // 6 hours — catalog rarely changes
+
+async function getSmsPoolServices(countryCode) {
+  const cached = smspoolServiceListCache[countryCode];
+  if (cached && Date.now() - cached.at < SMSPOOL_SERVICE_LIST_TTL) {
+    return cached.services;
+  }
+  const response = await axios.get(`${SMSPOOL_API}/service/retrieve_all`, {
+    params: { key: process.env.SMSPOOL_API_KEY, country: countryCode },
+    timeout: 8000,
+  });
+  const services = Array.isArray(response.data) ? response.data : [];
+  smspoolServiceListCache[countryCode] = { services, at: Date.now() };
+  return services;
+}
+
 // ── SMSPool price cache (country+service combo) ──
 const smspoolPriceCache = {};
 const SMSPOOL_PRICE_TTL = 30 * 60 * 1000; // 30 mins
 
-async function getSmsPoolPrice(countryCode, serviceName, usdToNgn) {
-  const cacheKey = `${countryCode}:${serviceName}`;
+async function getSmsPoolPrice(countryCode, serviceIdOrName, usdToNgn) {
+  const cacheKey = `${countryCode}:${serviceIdOrName}`;
   const cached = smspoolPriceCache[cacheKey];
   if (cached && Date.now() - cached.at < SMSPOOL_PRICE_TTL) {
     return cached.price;
@@ -155,7 +191,7 @@ async function getSmsPoolPrice(countryCode, serviceName, usdToNgn) {
       params: {
         key: process.env.SMSPOOL_API_KEY,
         country: countryCode,
-        service: serviceName,
+        service: serviceIdOrName,
       },
       timeout: 5000,
     });
@@ -168,7 +204,7 @@ async function getSmsPoolPrice(countryCode, serviceName, usdToNgn) {
     }
     return null;
   } catch (error) {
-    console.log(`SMSPool price fetch failed for ${countryCode}/${serviceName}:`, error.message);
+    console.log(`SMSPool price fetch failed for ${countryCode}/${serviceIdOrName}:`, error.message);
     return null;
   }
 }
@@ -191,7 +227,7 @@ function parseHandlerApiResponse(data) {
 function isLockedForService(lockedKeys, provider, service) {
   return (
     lockedKeys.includes(provider) ||
-    (service && lockedKeys.includes(service.toLowerCase()))
+    (service && lockedKeys.includes(String(service).toLowerCase()))
   );
 }
 
@@ -277,11 +313,29 @@ const getProviderProducts = async (req, res) => {
           message: "Provider 1 doesn't support this country.",
         });
       }
-      const options = [];
-      for (const slug of Object.keys(SERVICE_LABELS)) {
-        const price = await getSmsPoolPrice(isoCountry, SERVICE_LABELS[slug], usdToNgn);
-        options.push({ value: slug, label: SERVICE_LABELS[slug], price, qty: 1 });
+
+      let smspoolServices = [];
+      try {
+        smspoolServices = await getSmsPoolServices(isoCountry);
+      } catch (error) {
+        console.log(`SMSPool service list failed for ${isoCountry}:`, error.message);
+        return res.status(400).json({
+          message: "Provider 1 has no service data for this country right now.",
+        });
       }
+
+      // Price every service SMSPool actually offers for this country,
+      // 10 requests in flight at a time to stay under their rate limit.
+      const priced = await mapWithConcurrency(smspoolServices, 10, async (svc) => {
+        const price = await getSmsPoolPrice(isoCountry, svc.ID, usdToNgn);
+        return { value: String(svc.ID), label: svc.name, price, qty: 1 };
+      });
+
+      // Drop anything without a confirmed live price — no "price at checkout" placeholders.
+      const options = priced
+        .filter((o) => o.price != null)
+        .sort((a, b) => a.label.localeCompare(b.label));
+
       return res.status(200).json(options);
     }
 
@@ -321,7 +375,7 @@ const buySMS = async (req, res) => {
 
     if (isLockedForService(lockedKeys, provider, service)) {
       return res.status(400).json({
-        message: `${PROVIDER_LABELS[provider]} is currently unavailable for ${service}. Please try another option.`,
+        message: `${PROVIDER_LABELS[provider]} is currently unavailable for this service. Please try another option.`,
       });
     }
 
@@ -330,19 +384,20 @@ const buySMS = async (req, res) => {
     let smsCost = null;
 
     // ── SMSPool (Provider 1) ──
+    // `service` here is the live SMSPool service ID returned by
+    // getProviderProducts — pass it straight through, no local lookup.
     if (provider === "smspool") {
       const isoCountry = SMSPOOL_ISO_COUNTRY[country.toLowerCase()];
-      const properService = SERVICE_LABELS[service.toLowerCase()];
-      if (!isoCountry || !properService) {
+      if (!isoCountry) {
         return res.status(400).json({
-          message: "Provider 1 doesn't support this country/service. Try Provider 2.",
+          message: "Provider 1 doesn't support this country. Try Provider 2.",
         });
       }
       const response = await axios.post(`${SMSPOOL_API}/purchase/sms`, null, {
         params: {
           key: process.env.SMSPOOL_API_KEY,
           country: isoCountry,
-          service: properService,
+          service,
           ...(maxPriceNgn
             ? { max_price: (Number(maxPriceNgn) / (usdToNgn * MARKUP)).toFixed(2) }
             : {}),
@@ -410,7 +465,7 @@ const buySMS = async (req, res) => {
       type: "sms_purchase",
       amount: smsCost,
       status: "successful",
-      description: `Virtual number for ${service} in ${country} via ${provider}`,
+      description: `Virtual number for ${order.service} in ${country} via ${provider}`,
       paymentReference: `${provider}:${order.id}`,
       phone: order.phone,
       country: order.country,

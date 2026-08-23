@@ -6,6 +6,8 @@ const {
   getMyListings,
   getAllListingsAdmin,
   buyListing,
+  getMyPurchases,
+  getPurchaseCredentials,
   reviewListing,
 } = require("../controllers/listingController");
 const { protect, isAdmin } = require("../middleware/authMiddleware");
@@ -14,10 +16,12 @@ const router = express.Router();
 
 router.get("/", getListings);
 router.get("/mine", protect, getMyListings);
+router.get("/my-purchases", protect, getMyPurchases); // must come before /:id
 router.get("/admin/all", protect, isAdmin, getAllListingsAdmin); // must come before /:id
 router.get("/:id", getListingById);
 router.post("/", protect, isAdmin, createListing);
 router.post("/:id/buy", protect, buyListing);
+router.get("/:id/credentials", protect, getPurchaseCredentials);
 router.put("/:id/review", protect, isAdmin, reviewListing);
 
 module.exports = router;

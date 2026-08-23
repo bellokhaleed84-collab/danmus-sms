@@ -98,7 +98,21 @@ export default function ListingDetailPage() {
           <h1 className="text-2xl md:text-4xl font-bold mt-4">{listing.title}</h1>
           <p className="text-gray-400 mt-4 leading-relaxed">{listing.description}</p>
 
-          <div className="grid grid-cols-2 gap-4 mt-8">
+          {listing.previewLink && (
+            <div className="bg-[var(--input)] rounded-2xl p-5 mt-6">
+              <p className="text-gray-400 text-sm">Link</p>
+              <a
+                href={listing.previewLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 font-semibold break-all hover:underline mt-1 block"
+              >
+                {listing.previewLink}
+              </a>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 mt-6">
             <div className="bg-[var(--input)] rounded-2xl p-5">
               <p className="text-gray-400 text-sm">Followers</p>
               <p className="text-xl font-bold mt-1">{listing.followers?.toLocaleString() || "N/A"}</p>
@@ -136,6 +150,11 @@ export default function ListingDetailPage() {
               <p className="text-yellow-400 text-sm mt-4">
                 ⚠️ Save these details now — change the password and recovery email immediately after logging in.
               </p>
+              <Link href="/my-purchases">
+                <button className="w-full bg-[var(--input)] border border-[var(--border)] hover:border-blue-500 py-3 rounded-2xl font-semibold transition mt-2">
+                  View in My Purchases
+                </button>
+              </Link>
             </div>
           )}
         </div>

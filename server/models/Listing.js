@@ -18,6 +18,9 @@ const listingSchema = new mongoose.Schema(
     accountAge: { type: String }, // e.g. "2 years"
     price: { type: Number, required: true },
 
+    // Public — shown BEFORE purchase so buyers can verify the account is real
+    previewLink: { type: String },
+
     // Revealed only to buyer after purchase
     credentials: {
       username: { type: String, required: true },

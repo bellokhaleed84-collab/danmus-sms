@@ -16,6 +16,7 @@ export default function AdminListingsPage() {
     followers: "",
     accountAge: "",
     price: "",
+    profileLink: "",
     username: "",
     password: "",
     email: "",
@@ -57,6 +58,7 @@ export default function AdminListingsPage() {
           followers: Number(listingForm.followers),
           accountAge: listingForm.accountAge,
           price: Number(listingForm.price),
+          previewLink: listingForm.profileLink,
           credentials: {
             username: listingForm.username,
             password: listingForm.password,
@@ -76,6 +78,7 @@ export default function AdminListingsPage() {
         followers: "",
         accountAge: "",
         price: "",
+        profileLink: "",
         username: "",
         password: "",
         email: "",
@@ -218,6 +221,19 @@ export default function AdminListingsPage() {
                 />
               </div>
 
+              <div>
+                <label className="block mb-2 font-semibold text-sm md:text-base">
+                  Profile Link (public — shown to buyers before purchase)
+                </label>
+                <input
+                  name="profileLink"
+                  value={listingForm.profileLink}
+                  onChange={handleListingFormChange}
+                  placeholder="https://www.instagram.com/username"
+                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 outline-none focus:border-blue-500"
+                />
+              </div>
+
               <hr className="border-[var(--border)]" />
 
               <div>
@@ -324,6 +340,16 @@ export default function AdminListingsPage() {
             <p className="text-gray-400 text-xs md:text-sm mt-1">
               ₦{Number(listing.price).toLocaleString()} · {listing.followers?.toLocaleString() || 0} followers
             </p>
+            {listing.previewLink && (
+              <a
+                href={listing.previewLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 text-xs md:text-sm mt-1 block truncate hover:underline"
+              >
+                {listing.previewLink}
+              </a>
+            )}
             <p className="text-gray-500 text-[11px] md:text-xs mt-1">
               Created: {new Date(listing.createdAt).toLocaleString()}
             </p>

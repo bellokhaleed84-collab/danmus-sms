@@ -13,6 +13,7 @@ const createListing = async (req, res) => {
       followers,
       accountAge,
       price,
+      previewLink,
       credentials,
       screenshots,
     } = req.body;
@@ -36,6 +37,7 @@ const createListing = async (req, res) => {
       followers,
       accountAge,
       price,
+      previewLink,
       credentials: {
         username: credentials.username,
         password: encrypt(credentials.password),
@@ -112,28 +114,42 @@ const getAllListingsAdmin = async (req, res) => {
   }
 };
 
-// ── BUY LISTING (instant release — credentials + funds move immediately) ──
+// ── BUY LISTING (atomic — cannot be sold twice) ──
 const buyListing = async (req, res) => {
   try {
-    const listing = await Listing.findById(req.params.id);
+    // Step 1: atomically claim the listing. This findOneAndUpdate is a
+    // single atomic operation in MongoDB — if two buyers hit this at the
+    // exact same time, only the FIRST one's filter (status: "active")
+    // will still match; the second gets null back and is rejected below.
+    // This is what actually prevents the same account being sold twice —
+    // the old code read the listing, checked status in JS, then saved,
+    // which left a window where two requests could both pass the check.
+    const listing = await Listing.findOneAndUpdate(
+      { _id: req.params.id, status: "active" },
+      { $set: { status: "sold", buyer: req.user._id, soldAt: new Date() } },
+      { new: true }
+    );
 
-    if (!listing) return res.status(404).json({ message: "Listing not found" });
-    if (listing.status !== "active") {
+    if (!listing) {
       return res.status(400).json({ message: "This listing is no longer available" });
     }
 
-    const buyer = await User.findById(req.user._id);
-    if (buyer.balance < listing.price) {
+    // Step 2: atomically charge the buyer, only if they actually have
+    // enough balance. Also atomic, for the same reason as above.
+    const buyer = await User.findOneAndUpdate(
+      { _id: req.user._id, balance: { $gte: listing.price } },
+      { $inc: { balance: -listing.price } },
+      { new: true }
+    );
+
+    if (!buyer) {
+      // Buyer couldn't afford it after all — release the listing back
+      // to "active" so someone else can still buy it.
+      await Listing.findByIdAndUpdate(listing._id, {
+        $set: { status: "active", buyer: null, soldAt: null },
+      });
       return res.status(400).json({ message: "Insufficient balance" });
     }
-
-    buyer.balance -= listing.price;
-    await buyer.save();
-
-    listing.status = "sold";
-    listing.buyer = buyer._id;
-    listing.soldAt = new Date();
-    await listing.save();
 
     await Transaction.create({
       user: buyer._id,
@@ -153,6 +169,41 @@ const buyListing = async (req, res) => {
         recoveryInfo: listing.credentials.recoveryInfo,
       },
       balance: buyer.balance,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ── MY PURCHASES (buyer's own bought listings, credentials hidden) ──
+const getMyPurchases = async (req, res) => {
+  try {
+    const purchases = await Listing.find({ buyer: req.user._id, status: "sold" })
+      .select("-credentials")
+      .sort({ soldAt: -1 });
+    res.status(200).json(purchases);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ── VIEW LOGIN DETAILS FOR A PAST PURCHASE (buyer only, re-viewable anytime) ──
+const getPurchaseCredentials = async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ message: "Listing not found" });
+
+    if (!listing.buyer || String(listing.buyer) !== String(req.user._id)) {
+      return res.status(403).json({ message: "You did not purchase this listing" });
+    }
+
+    res.status(200).json({
+      credentials: {
+        username: listing.credentials.username,
+        password: decrypt(listing.credentials.password),
+        email: listing.credentials.email,
+        recoveryInfo: listing.credentials.recoveryInfo,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -187,5 +238,7 @@ module.exports = {
   getMyListings,
   getAllListingsAdmin,
   buyListing,
+  getMyPurchases,
+  getPurchaseCredentials,
   reviewListing,
 };

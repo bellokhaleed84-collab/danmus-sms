@@ -9,19 +9,41 @@ const listingSchema = new mongoose.Schema(
     },
     platform: {
       type: String,
-      enum: ["instagram", "facebook", "tiktok", "twitter", "telegram", "whatsapp", "other"],
+      enum: [
+        "instagram",
+        "facebook",
+        "tiktok",
+        "twitter",
+        "telegram",
+        "whatsapp",
+        "piavpn",
+        "snapchat",
+        "mailcom",
+        "outlook",
+        "netflix",
+        "appleid",
+        "moviebox",
+        "applemusic",
+        "reddit",
+        "discord",
+        "linkedin",
+        "textplus",
+        "hotspotshield",
+        "nordvpn",
+        "surfshark",
+        "expressvpn",
+        "other",
+      ],
       required: true,
     },
     title: { type: String, required: true },
     description: { type: String, required: true },
     followers: { type: Number, default: 0 },
-    accountAge: { type: String }, // e.g. "2 years"
+    accountAge: { type: String },
     price: { type: Number, required: true },
 
-    // Public — shown BEFORE purchase so buyers can verify the account is real
     previewLink: { type: String },
 
-    // Revealed only to buyer after purchase
     credentials: {
       username: { type: String, required: true },
       password: { type: String, required: true },
@@ -29,7 +51,7 @@ const listingSchema = new mongoose.Schema(
       recoveryInfo: { type: String },
     },
 
-    screenshots: [{ type: String }], // image URLs (proof of stats)
+    screenshots: [{ type: String }],
 
     status: {
       type: String,

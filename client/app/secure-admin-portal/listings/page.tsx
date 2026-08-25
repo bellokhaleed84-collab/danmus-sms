@@ -147,7 +147,7 @@ export default function AdminListingsPage() {
             <form onSubmit={handleCreateListing} className="space-y-5">
               <div>
                 <label className="block mb-2 font-semibold text-sm md:text-base">Platform</label>
-                <select
+                               <select
                   name="platform"
                   value={listingForm.platform}
                   onChange={handleListingFormChange}
@@ -158,7 +158,22 @@ export default function AdminListingsPage() {
                   <option value="tiktok">TikTok</option>
                   <option value="twitter">Twitter/X</option>
                   <option value="telegram">Telegram</option>
-                  <option value="whatsapp">WhatsApp</option>
+                  <option value="piavpn">Pia VPN</option>
+                  <option value="snapchat">Snapchat</option>
+                  <option value="mailcom">Mail.com</option>
+                  <option value="outlook">Microsoft Outlook / Hotmail</option>
+                  <option value="netflix">Netflix Premium (4K)</option>
+                  <option value="appleid">Apple ID</option>
+                  <option value="moviebox">MovieBox</option>
+                  <option value="applemusic">Apple Music</option>
+                  <option value="reddit">Reddit (0-50 Karma)</option>
+                  <option value="discord">Discord</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="textplus">TextPlus (Microsoft)</option>
+                  <option value="hotspotshield">Hotspot Shield VPN</option>
+                  <option value="nordvpn">NordVPN</option>
+                  <option value="surfshark">Surfshark VPN</option>
+                  <option value="expressvpn">ExpressVPN</option>
                   <option value="other">Other</option>
                 </select>
               </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import API from "@/lib/api";
+import Link from "next/link";
 
 export default function AdminTransactionsPage() {
   const [loading, setLoading] = useState(true);
@@ -72,36 +73,35 @@ export default function AdminTransactionsPage() {
 
       <div className="space-y-3 md:space-y-4">
         {filteredTransactions.map((tx) => (
-          <div
-            key={tx._id}
-            className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 md:p-5 flex items-start justify-between gap-3"
-          >
-            <div className="min-w-0">
-              <p className="font-bold text-sm md:text-lg truncate">{tx.description || tx.type}</p>
-              <p className="text-gray-400 text-xs md:text-sm mt-1 truncate">
-                {tx.user?.name} — {tx.user?.email}
-              </p>
-              <p className="text-gray-500 text-[11px] md:text-xs mt-1">
-                {new Date(tx.createdAt).toLocaleString()}
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-1.5 md:gap-2 shrink-0">
-              <p className={`text-base md:text-xl font-bold whitespace-nowrap ${
-                tx.type === "deposit" ? "text-green-500" : "text-blue-500"
-              }`}>
-                {tx.type === "deposit" ? "+" : "-"}₦{Number(tx.amount).toLocaleString()}
-              </p>
-              <div className={`px-2 md:px-3 py-1 rounded-xl text-[11px] md:text-xs font-semibold ${
-                tx.status === "successful"
-                  ? "bg-green-500/20 text-green-500"
-                  : tx.status === "pending"
-                  ? "bg-yellow-500/20 text-yellow-500"
-                  : "bg-red-500/20 text-red-500"
-              }`}>
-                {tx.status}
+          <Link key={tx._id} href={`/secure-admin-portal/transactions/${tx._id}`}>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 md:p-5 flex items-start justify-between gap-3 hover:border-blue-500 transition cursor-pointer">
+              <div className="min-w-0">
+                <p className="font-bold text-sm md:text-lg truncate">{tx.description || tx.type}</p>
+                <p className="text-gray-400 text-xs md:text-sm mt-1 truncate">
+                  {tx.user?.name} — {tx.user?.email}
+                </p>
+                <p className="text-gray-500 text-[11px] md:text-xs mt-1">
+                  {new Date(tx.createdAt).toLocaleString()}
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1.5 md:gap-2 shrink-0">
+                <p className={`text-base md:text-xl font-bold whitespace-nowrap ${
+                  tx.type === "deposit" ? "text-green-500" : "text-blue-500"
+                }`}>
+                  {tx.type === "deposit" ? "+" : "-"}₦{Number(tx.amount).toLocaleString()}
+                </p>
+                <div className={`px-2 md:px-3 py-1 rounded-xl text-[11px] md:text-xs font-semibold ${
+                  tx.status === "successful"
+                    ? "bg-green-500/20 text-green-500"
+                    : tx.status === "pending"
+                    ? "bg-yellow-500/20 text-yellow-500"
+                    : "bg-red-500/20 text-red-500"
+                }`}>
+                  {tx.status}
+                </div>
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </>

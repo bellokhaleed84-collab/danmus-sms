@@ -50,6 +50,7 @@ export default function SmsHistoryPage() {
 
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all duration-300 pb-28 md:pb-0 overflow-x-hidden">
 
+      {/* BACKGROUND EFFECTS */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
 
         <div className="absolute top-0 left-0 w-72 md:w-96 h-72 md:h-96 bg-blue-500/20 blur-[120px] rounded-full" />
@@ -60,6 +61,7 @@ export default function SmsHistoryPage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
+        {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
 
           <div>
@@ -87,6 +89,7 @@ export default function SmsHistoryPage() {
 
         </div>
 
+        {/* STATS */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-10">
 
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
@@ -127,6 +130,7 @@ export default function SmsHistoryPage() {
 
         </div>
 
+        {/* TABLE */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-[28px] md:rounded-[32px] shadow-2xl overflow-hidden">
 
           <div className="overflow-x-auto">
@@ -199,7 +203,8 @@ export default function SmsHistoryPage() {
 
                     <tr
                       key={sms._id}
-                      className="border-t border-[var(--border)] hover:bg-[var(--input)] transition"
+                      onClick={() => window.location.href = `/sms-history/${sms._id}`}
+                      className="border-t border-[var(--border)] hover:bg-[var(--input)] transition cursor-pointer"
                     >
 
                       <td className="p-5 md:p-6 font-semibold">

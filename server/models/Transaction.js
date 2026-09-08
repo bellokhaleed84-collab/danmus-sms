@@ -21,7 +21,7 @@ const transactionSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "successful", "failed"],
+      enum: ["pending", "successful", "failed", "not_successful"],
       default: "successful",
     },
 
@@ -33,32 +33,29 @@ const transactionSchema = new mongoose.Schema(
       type: String,
     },
 
-    // Prevents the same sms_purchase transaction from being refunded more
-    // than once (double-click, retry, or repeated cancel calls).
     refunded: {
       type: Boolean,
       default: false,
     },
 
-    // ── STRUCTURED DETAILS (optional — populated going forward) ──
     phone: {
-      type: String, // SMS purchases: the virtual number issued
+      type: String,
     },
 
     country: {
-      type: String, // SMS purchases: country of the number
+      type: String,
     },
 
     service: {
-      type: String, // SMS purchases: e.g. "whatsapp", "telegram"
+      type: String,
     },
 
     otp: {
-      type: String, // SMS purchases: the verification code received
+      type: String,
     },
 
     platform: {
-      type: String, // Marketplace purchases: e.g. "instagram", "tiktok"
+      type: String,
     },
   },
   {

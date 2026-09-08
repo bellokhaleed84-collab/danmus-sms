@@ -17,9 +17,6 @@ const fivesimHeaders = {
 const PROVIDER_LABELS = { smspool: "Provider 1", fivesim: "Provider 2", grizzly: "Provider 3" };
 const PROVIDER_ORDER = ["smspool", "fivesim", "grizzly"];
 
-// Shown when no real/cached price exists yet for a service — matched by
-// service label (case-insensitive). Fill in real numbers per service.
-// Anything not listed here falls back to DEFAULT_ESTIMATE_RANGE.
 const SERVICE_ESTIMATE_RANGES = {
   whatsapp: { min: 1500, max: 3000 },
   telegram: { min: 500, max: 1200 },
@@ -111,7 +108,6 @@ const getProviderCountries = async (req, res) => {
       });
       const countries = response.data;
       if (!countries || typeof countries !== "object") {
-        console.log("Grizzly getCountries unexpected:", countries);
         return res.status(200).json([]);
       }
       const list = Object.values(countries)
@@ -144,12 +140,6 @@ const getProviderCountries = async (req, res) => {
 };
 
 // ── PROVIDER-SCOPED PRODUCTS/SERVICES ─────────
-// SMSPool/Grizzly show a cached "last real price" when we have one (seeded
-// by buySMS after an actual purchase), otherwise "price confirmed at
-// checkout". No per-service live-price network calls here — that guessed
-// endpoint (/request/price) isn't confirmed to exist and was causing both
-// slow loads (extra calls per service, each up to 4s) and missing prices
-// (silently failing for everything except cached combos).
 const getProviderProducts = async (req, res) => {
   const { provider, country } = req.params;
   try {
@@ -202,10 +192,6 @@ const getProviderProducts = async (req, res) => {
     }
 
     if (provider === "smspool") {
-      // Confirmed endpoint per SMSPool's official Postman docs:
-      // POST https://api.smspool.net/request/pricing (form-data: key, country)
-      // Returns real per-service prices for the given country in one call —
-      // no more separate service/retrieve_all guess needed.
       try {
         const form = new URLSearchParams();
         form.append("key", process.env.SMSPOOL_API_KEY);
@@ -214,9 +200,6 @@ const getProviderProducts = async (req, res) => {
           timeout: 8000,
         });
         const rows = Array.isArray(response.data) ? response.data : [];
-
-        // Multiple pools can offer the same service at different prices —
-        // keep the cheapest per service for display.
         const cheapestByService = {};
         for (const row of rows) {
           const usd = Number(row.price);
@@ -226,7 +209,6 @@ const getProviderProducts = async (req, res) => {
             cheapestByService[row.service] = { usd, name: row.service_name };
           }
         }
-
         const list = Object.entries(cheapestByService)
           .map(([serviceId, { usd, name }]) => ({
             value: serviceId,
@@ -235,24 +217,19 @@ const getProviderProducts = async (req, res) => {
             qty: 1,
           }))
           .filter((s) => notLocked(s.label));
-
         return res.status(200).json(list);
       } catch (error) {
         console.log("SMSPool /request/pricing failed, falling back to cache:", error.message);
       }
 
-      // Fallback only if the live pricing call itself fails (network issue,
-      // rate limit, etc.) — still try to show something useful.
       const response = await axios.get(`${SMSPOOL_API}/service/retrieve_all`, {
         params: { key: process.env.SMSPOOL_API_KEY, country },
         timeout: 5000,
       });
       const data = response.data;
       const arr = Array.isArray(data) ? data : Object.values(data || {});
-
       const cached = await PriceCache.find({ provider: "smspool", country }).lean();
       const cacheMap = Object.fromEntries(cached.map((c) => [c.service, c.priceNgn]));
-
       const list = arr
         .map((s) => {
           const value = s.ID ?? s.id ?? s.name;
@@ -336,17 +313,23 @@ const buySMS = async (req, res) => {
     }
 
     if (provider === "fivesim") {
-      const response = await axios.get(`${FIVESIM_API}/user/buy/activation/${country}/any/${service}`, {
-        headers: fivesimHeaders,
-        timeout: 8000,
-      });
+      const response = await axios.get(
+        `${FIVESIM_API}/user/buy/activation/${country}/any/${service}`,
+        { headers: fivesimHeaders, timeout: 8000 }
+      );
       const data = response.data;
       console.log("5sim buy response:", data);
       if (!data?.id || !data?.phone || data.phone === "" || data.phone.includes("no free")) {
         return res.status(400).json({ message: "Provider 2 has no numbers available right now." });
       }
       smsCost = Math.ceil(Number(data.price) * usdToNgn * MARKUP);
-      order = { id: String(data.id), phone: data.phone, country: data.country, service: data.product, price: smsCost };
+      order = {
+        id: String(data.id),
+        phone: data.phone,
+        country: data.country,
+        service: data.product,
+        price: smsCost,
+      };
     }
 
     if (provider === "grizzly") {
@@ -365,13 +348,20 @@ const buySMS = async (req, res) => {
       }
 
       const response = await axios.get(GRIZZLY_API, {
-        params: { api_key: process.env.GRIZZLY_API_KEY, action: "getNumber", service: code, country },
+        params: {
+          api_key: process.env.GRIZZLY_API_KEY,
+          action: "getNumber",
+          service: code,
+          country,
+        },
         timeout: 8000,
       });
       console.log(`Grizzly buy response (country=${country}, service=${code}):`, response.data);
       const parsed = parseHandlerApiResponse(response.data);
       if (parsed.status !== "ACCESS_NUMBER") {
-        return res.status(400).json({ message: "Provider 3 has no numbers available right now for this selection." });
+        return res.status(400).json({
+          message: "Provider 3 has no numbers available right now for this selection.",
+        });
       }
 
       let grizzlyUsdCost = null;
@@ -394,10 +384,20 @@ const buySMS = async (req, res) => {
 
       if (grizzlyUsdCost == null) {
         await axios
-          .get(GRIZZLY_API, { params: { api_key: process.env.GRIZZLY_API_KEY, action: "setStatus", id: parsed.id, status: 8 } })
+          .get(GRIZZLY_API, {
+            params: {
+              api_key: process.env.GRIZZLY_API_KEY,
+              action: "setStatus",
+              id: parsed.id,
+              status: 8,
+            },
+          })
           .catch(() => {});
-        return res.status(500).json({ message: "Could not confirm price for Provider 3. Please try again." });
+        return res.status(500).json({
+          message: "Could not confirm price for Provider 3. Please try again.",
+        });
       }
+
       smsCost = Math.ceil(grizzlyUsdCost * usdToNgn * MARKUP);
       order = { id: parsed.id, phone: parsed.phone, country, service, price: smsCost };
       PriceCache.findOneAndUpdate(
@@ -414,11 +414,12 @@ const buySMS = async (req, res) => {
     user.balance -= smsCost;
     await user.save();
 
+    // Save as PENDING — only becomes successful when OTP is received
     await Transaction.create({
       user: user._id,
       type: "sms_purchase",
       amount: smsCost,
-      status: "successful",
+      status: "pending",
       description: `Virtual number for ${service} in ${country}`,
       paymentReference: `${provider}:${order.id}`,
       phone: order.phone,
@@ -426,7 +427,12 @@ const buySMS = async (req, res) => {
       service: order.service,
     });
 
-    res.status(200).json({ message: "Number purchased successfully", balance: user.balance, provider, order });
+    res.status(200).json({
+      message: "Number purchased successfully",
+      balance: user.balance,
+      provider,
+      order,
+    });
   } catch (error) {
     console.error("buySMS failed:", error?.response?.data || error.message);
     res.status(500).json({ message: "Failed to purchase number. Please try again." });
@@ -441,7 +447,11 @@ const checkSMS = async (req, res) => {
     if (!orderId || orderId === "undefined") {
       return res.status(400).json({ message: "Invalid order ID" });
     }
-    const cleanId = orderId.replace("grizzly:", "").replace("5sim:", "").replace("fivesim:", "").replace("smspool:", "");
+    const cleanId = orderId
+      .replace("grizzly:", "")
+      .replace("5sim:", "")
+      .replace("fivesim:", "")
+      .replace("smspool:", "");
     let code = null;
 
     if (provider === "smspool") {
@@ -460,7 +470,10 @@ const checkSMS = async (req, res) => {
       if (parsed.status === "STATUS_OK") code = parsed.code;
       else return res.status(200).json({ sms: [], status: parsed.status });
     } else {
-      const response = await axios.get(`${FIVESIM_API}/user/check/${cleanId}`, { headers: fivesimHeaders, timeout: 5000 });
+      const response = await axios.get(`${FIVESIM_API}/user/check/${cleanId}`, {
+        headers: fivesimHeaders,
+        timeout: 5000,
+      });
       const sms = response.data.sms || [];
       if (sms.length > 0) code = sms[0].code;
       else return res.status(200).json(response.data);
@@ -468,9 +481,16 @@ const checkSMS = async (req, res) => {
 
     if (code) {
       const exactRef = `${provider}:${cleanId}`;
-      await Transaction.findOneAndUpdate({ paymentReference: exactRef }, { otp: code });
+      // Update transaction to successful + save OTP
+      await Transaction.findOneAndUpdate(
+        { paymentReference: exactRef },
+        { otp: code, status: "successful" }
+      );
     }
-    return res.status(200).json({ sms: [{ code, text: `Your OTP code: ${code}` }] });
+
+    return res.status(200).json({
+      sms: [{ code, text: `Your OTP code: ${code}` }],
+    });
   } catch (error) {
     console.error("Check SMS error:", error?.response?.data || error.message);
     res.status(500).json({ message: error.message });
@@ -482,7 +502,11 @@ const cancelOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { provider } = req.query;
-    const cleanId = orderId.replace("grizzly:", "").replace("5sim:", "").replace("fivesim:", "").replace("smspool:", "");
+    const cleanId = orderId
+      .replace("grizzly:", "")
+      .replace("5sim:", "")
+      .replace("fivesim:", "")
+      .replace("smspool:", "");
 
     if (provider === "smspool") {
       await axios.post(`${SMSPOOL_API}/sms/cancel`, null, {
@@ -491,11 +515,19 @@ const cancelOrder = async (req, res) => {
       });
     } else if (provider === "grizzly") {
       await axios.get(GRIZZLY_API, {
-        params: { api_key: process.env.GRIZZLY_API_KEY, action: "setStatus", id: cleanId, status: 8 },
+        params: {
+          api_key: process.env.GRIZZLY_API_KEY,
+          action: "setStatus",
+          id: cleanId,
+          status: 8,
+        },
       });
     } else {
       try {
-        await axios.get(`${FIVESIM_API}/user/cancel/${cleanId}`, { headers: fivesimHeaders, timeout: 5000 });
+        await axios.get(`${FIVESIM_API}/user/cancel/${cleanId}`, {
+          headers: fivesimHeaders,
+          timeout: 5000,
+        });
       } catch (e) {
         console.log("5sim cancel failed:", e.message);
       }
@@ -504,7 +536,7 @@ const cancelOrder = async (req, res) => {
     const exactRef = `${provider}:${cleanId}`;
     const transaction = await Transaction.findOneAndUpdate(
       { paymentReference: exactRef, refunded: false },
-      { refunded: true },
+      { refunded: true, status: "not_successful" },
       { new: true }
     );
 
@@ -513,7 +545,10 @@ const cancelOrder = async (req, res) => {
       if (user) {
         user.balance += transaction.amount;
         await user.save();
-        return res.status(200).json({ message: "Order cancelled and balance refunded", balance: user.balance });
+        return res.status(200).json({
+          message: "Order cancelled and balance refunded",
+          balance: user.balance,
+        });
       }
     }
     res.status(200).json({ message: "Order cancelled successfully" });
@@ -522,9 +557,30 @@ const cancelOrder = async (req, res) => {
   }
 };
 
+// ── MARK OLD PENDING AS NOT SUCCESSFUL ────────
+const markExpiredOrders = async (req, res) => {
+  try {
+    const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const result = await Transaction.updateMany(
+      {
+        type: "sms_purchase",
+        status: "pending",
+        createdAt: { $lt: thirtyMinsAgo },
+      },
+      { status: "not_successful" }
+    );
+    res.status(200).json({ message: `Marked ${result.modifiedCount} orders as not successful` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getSmsHistory = async (req, res) => {
   try {
-    const transactions = await Transaction.find({ user: req.user._id, type: "sms_purchase" }).sort({ createdAt: -1 });
+    const transactions = await Transaction.find({
+      user: req.user._id,
+      type: "sms_purchase",
+    }).sort({ createdAt: -1 });
     res.status(200).json(transactions);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -538,4 +594,5 @@ module.exports = {
   checkSMS,
   cancelOrder,
   getSmsHistory,
+  markExpiredOrders,
 };

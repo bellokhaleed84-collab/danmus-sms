@@ -54,24 +54,31 @@ const platformIcons: any = {
   other: <FaLink className="text-gray-400" />,
 };
 
-/* ---------- shared receipt shape ---------- */
 type Receipt = {
   id: string;
   type: "sms" | "purchase";
   icon: React.ReactNode;
-  title: string;      // service name or purchase title
-  subtitle: string;   // country or platform
-  detail: string;     // phone number or price
-  status: "Completed" | "Pending";
+  title: string;
+  subtitle: string;
+  detail: string;
+  status: "Completed" | "Pending" | "Not Successful";
   date: string;
-  href: string;        // where clicking the row takes you
+  href: string;
 };
+
+function getSmsStatus(sms: any): "Completed" | "Pending" | "Not Successful" {
+  if (sms.otp || sms.status === "successful") return "Completed";
+  if (sms.status === "not_successful" || sms.status === "failed") return "Not Successful";
+  // Auto-mark as Not Successful after 30 minutes
+  const age = new Date().getTime() - new Date(sms.createdAt).getTime();
+  if (age > 30 * 60 * 1000) return "Not Successful";
+  return "Pending";
+}
 
 export default function SmsHistoryPage() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* FETCH SMS HISTORY + PURCHASES TOGETHER */
   useEffect(() => {
     async function fetchAll() {
       const token = localStorage.getItem("token");
@@ -92,7 +99,7 @@ export default function SmsHistoryPage() {
               title: sms.service,
               subtitle: sms.country,
               detail: sms.phone,
-              status: sms.otp ? "Completed" : "Pending",
+              status: getSmsStatus(sms),
               date: sms.createdAt,
               href: `/sms-history/${sms._id}`,
             }))
@@ -103,11 +110,14 @@ export default function SmsHistoryPage() {
           ? purchaseRes.value.data.map((p: any) => ({
               id: p._id,
               type: "purchase" as const,
-              icon: platformIcons[p.platform] || <FaCartShopping className="text-purple-400" />,
+              icon:
+                platformIcons[p.platform] || (
+                  <FaCartShopping className="text-purple-400" />
+                ),
               title: p.title,
               subtitle: p.platform,
               detail: `₦${Number(p.price).toLocaleString()}`,
-              status: "Completed",
+              status: "Completed" as const,
               date: p.createdAt,
               href: `/my-purchases/${p._id}`,
             }))
@@ -124,20 +134,21 @@ export default function SmsHistoryPage() {
     fetchAll();
   }, []);
 
-  /* STATS */
   const totalOrders = receipts.length;
   const completedOrders = receipts.filter((r) => r.status === "Completed").length;
   const pendingOrders = receipts.filter((r) => r.status === "Pending").length;
+  const failedOrders = receipts.filter((r) => r.status === "Not Successful").length;
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all duration-300 pb-28 md:pb-0 overflow-x-hidden">
-      {/* BACKGROUND EFFECTS */}
+
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute top-0 left-0 w-72 md:w-96 h-72 md:h-96 bg-blue-500/20 blur-[120px] rounded-full" />
         <div className="absolute bottom-0 right-0 w-72 md:w-96 h-72 md:h-96 bg-purple-500/20 blur-[120px] rounded-full" />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
+
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
           <div>
@@ -146,7 +157,6 @@ export default function SmsHistoryPage() {
               All your OTP orders and marketplace purchases in one place
             </p>
           </div>
-
           <Link href="/dashboard">
             <button
               title="Back Dashboard"
@@ -158,7 +168,8 @@ export default function SmsHistoryPage() {
         </div>
 
         {/* STATS */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10">
+
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
             <p className="text-gray-400 text-sm md:text-base">Total Orders</p>
             <h2 className="text-3xl md:text-5xl font-bold mt-4">{totalOrders}</h2>
@@ -177,6 +188,14 @@ export default function SmsHistoryPage() {
               {pendingOrders}
             </h2>
           </div>
+
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
+            <p className="text-gray-400 text-sm md:text-base">Not Successful</p>
+            <h2 className="text-3xl md:text-5xl font-bold mt-4 text-red-500">
+              {failedOrders}
+            </h2>
+          </div>
+
         </div>
 
         {/* TABLE */}
@@ -229,6 +248,8 @@ export default function SmsHistoryPage() {
                           className={`px-4 py-2 rounded-xl text-sm font-semibold ${
                             r.status === "Completed"
                               ? "bg-green-500/20 text-green-500"
+                              : r.status === "Not Successful"
+                              ? "bg-red-500/20 text-red-500"
                               : "bg-yellow-500/20 text-yellow-500"
                           }`}
                         >
@@ -246,6 +267,7 @@ export default function SmsHistoryPage() {
             </table>
           </div>
         </div>
+
       </div>
 
       <MobileNav />

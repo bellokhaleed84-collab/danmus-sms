@@ -99,11 +99,11 @@ export default function WalletPage() {
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-[32px] p-10 shadow-2xl text-white mb-10">
           <p className="text-lg opacity-80">Total Balance</p>
           <h2 className="text-4xl md:text-6xl font-bold mt-4">
-            {loading ? "Loading..." : `₦${Number(balance).toLocaleString()}`}
+            {loading ? "Loading..." : `\u20A6${Number(balance).toLocaleString()}`}
           </h2>
 
           <div className="flex flex-wrap gap-4 mt-8">
-            <Link href="/add-funds">
+            <Link href="/fund">
               <button className="bg-white text-black hover:bg-gray-200 px-4 md:px-6 py-3 rounded-2xl font-semibold transition">
                 Fund Wallet
               </button>
@@ -119,14 +119,14 @@ export default function WalletPage() {
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
             <p className="text-gray-400">Total Deposits</p>
             <h3 className="text-4xl font-bold mt-4 text-green-500">
-              ₦{Number(totalDeposits).toLocaleString()}
+              {"\u20A6"}{Number(totalDeposits).toLocaleString()}
             </h3>
           </div>
 
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl">
             <p className="text-gray-400">Total Spent</p>
             <h3 className="text-4xl font-bold mt-4 text-red-500">
-              ₦{Number(totalSpent).toLocaleString()}
+              {"\u20A6"}{Number(totalSpent).toLocaleString()}
             </h3>
           </div>
 
@@ -143,9 +143,9 @@ export default function WalletPage() {
           <h2 className="text-2xl md:text-3xl font-bold mb-6">Quick Actions</h2>
 
           <div className="grid md:grid-cols-3 gap-6">
-            <Link href="/add-funds">
+            <Link href="/fund">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
-                <div className="text-5xl mb-5">💰</div>
+                <div className="text-5xl mb-5">{"\uD83D\uDCB0"}</div>
                 <h3 className="text-2xl font-bold">Add Funds</h3>
                 <p className="text-gray-400 mt-3">Fund your wallet instantly</p>
               </div>
@@ -153,7 +153,7 @@ export default function WalletPage() {
 
             <Link href="/buy-number">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
-                <div className="text-5xl mb-5">📱</div>
+                <div className="text-5xl mb-5">{"\uD83D\uDCF1"}</div>
                 <h3 className="text-2xl font-bold">Buy Number</h3>
                 <p className="text-gray-400 mt-3">Purchase virtual numbers</p>
               </div>
@@ -161,7 +161,7 @@ export default function WalletPage() {
 
             <Link href="/sms-history">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
-                <div className="text-5xl mb-5">📩</div>
+                <div className="text-5xl mb-5">{"\uD83D\uDCE9"}</div>
                 <h3 className="text-2xl font-bold">Transaction History</h3>
                 <p className="text-gray-400 mt-3">View wallet activities</p>
               </div>
@@ -207,7 +207,7 @@ export default function WalletPage() {
                     <p className={`font-bold text-lg ${
                       tx.type === "deposit" ? "text-green-500" : "text-red-500"
                     }`}>
-                      {tx.type === "deposit" ? "+" : "-"}₦{Number(tx.amount).toLocaleString()}
+                      {tx.type === "deposit" ? "+" : "-"}{"\u20A6"}{Number(tx.amount).toLocaleString()}
                     </p>
                     <span className={`text-xs px-3 py-1 rounded-full ${
                       tx.status === "successful" ? "bg-green-500/20 text-green-500" :

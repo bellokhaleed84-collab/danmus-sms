@@ -53,7 +53,7 @@ const initialize = async (req, res) => {
     const amount = Number(req.body.amount);
     if (!Number.isFinite(amount) || amount < MIN_NGN || amount > MAX_NGN) {
       return res.status(400).json({
-        message: `Amount must be between ₦${MIN_NGN} and ₦${MAX_NGN.toLocaleString()}`,
+        message: `Amount must be between \u20A6${MIN_NGN} and \u20A6${MAX_NGN.toLocaleString()}`,
       });
     }
     const naira = Math.round(amount); // whole naira only

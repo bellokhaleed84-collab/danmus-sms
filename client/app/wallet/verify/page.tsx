@@ -7,7 +7,7 @@ import API from "@/lib/api";
 
 function Verify() {
   const params = useSearchParams();
-  const [msg, setMsg] = useState("Confirming your payment…");
+  const [msg, setMsg] = useState("Confirming your payment\u2026");
   const [done, setDone] = useState(false);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ function Verify() {
         const { data } = await API.get(`/squad/verify/${encodeURIComponent(ref)}`);
         if (data.state === "success") {
           sessionStorage.removeItem("squad_ref");
-          setMsg(`Payment confirmed. New balance: ₦${Number(data.balance).toLocaleString()}`);
+          setMsg(`Payment confirmed. New balance: \u20A6${Number(data.balance).toLocaleString()}`);
           return setDone(true);
         }
         if (data.state === "failed" || data.state === "mismatch" || data.state === "not_found") {

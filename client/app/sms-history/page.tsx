@@ -26,6 +26,7 @@ import {
   FaVideo,
   FaMessage,
   FaCartShopping,
+  FaRocket,
 } from "react-icons/fa6";
 
 const platformIcons: any = {
@@ -56,7 +57,7 @@ const platformIcons: any = {
 
 type Receipt = {
   id: string;
-  type: "sms" | "purchase";
+  type: "sms" | "purchase" | "boost";
   icon: React.ReactNode;
   title: string;
   subtitle: string;
@@ -75,6 +76,12 @@ function getSmsStatus(sms: any): "Completed" | "Pending" | "Not Successful" {
   return "Pending";
 }
 
+function getBoostStatus(status: string): "Completed" | "Pending" | "Not Successful" {
+  if (status === "completed") return "Completed";
+  if (["failed", "canceled", "refunded", "partial"].includes(status)) return "Not Successful";
+  return "Pending";
+}
+
 export default function SmsHistoryPage() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,9 +90,12 @@ export default function SmsHistoryPage() {
     async function fetchAll() {
       const token = localStorage.getItem("token");
 
-      const [smsRes, purchaseRes] = await Promise.allSettled([
+      const [smsRes, purchaseRes, boostRes] = await Promise.allSettled([
         API.get("/sms/history"),
         API.get("/listings/my-purchases", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        API.get("/boost/orders/mine", {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -116,14 +126,29 @@ export default function SmsHistoryPage() {
                 ),
               title: p.title,
               subtitle: p.platform,
-              detail: `₦${Number(p.price).toLocaleString()}`,
+              detail: `\u20A6${Number(p.price).toLocaleString()}`,
               status: "Completed" as const,
               date: p.createdAt,
               href: `/my-purchases/${p._id}`,
             }))
           : [];
 
-      const merged = [...smsReceipts, ...purchaseReceipts].sort(
+      const boostReceipts: Receipt[] =
+        boostRes.status === "fulfilled" && Array.isArray(boostRes.value.data)
+          ? boostRes.value.data.map((b: any) => ({
+              id: b._id,
+              type: "boost" as const,
+              icon: <FaRocket className="text-orange-400" />,
+              title: b.serviceName || "Boost",
+              subtitle: b.category || "Boost",
+              detail: `\u20A6${Number(b.price).toLocaleString()}`,
+              status: getBoostStatus(b.status),
+              date: b.createdAt,
+              href: "/boost",
+            }))
+          : [];
+
+      const merged = [...smsReceipts, ...purchaseReceipts, ...boostReceipts].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
 
@@ -154,7 +179,7 @@ export default function SmsHistoryPage() {
           <div>
             <h1 className="text-3xl md:text-5xl font-bold">History</h1>
             <p className="text-gray-400 mt-3 text-sm md:text-lg">
-              All your OTP orders and marketplace purchases in one place
+              All your OTP orders, boosts and marketplace purchases in one place
             </p>
           </div>
           <Link href="/dashboard">
@@ -240,7 +265,7 @@ export default function SmsHistoryPage() {
                       <td className="p-5 md:p-6">{r.subtitle}</td>
 
                       <td className="p-5 md:p-6 font-bold tracking-widest">
-                        {r.detail || "—"}
+                        {r.detail || "\u2014"}
                       </td>
 
                       <td className="p-5 md:p-6">

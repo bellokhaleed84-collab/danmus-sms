@@ -12,8 +12,12 @@ const router = express.Router();
 
 // Tells the frontend whether to show the real page or "coming soon".
 // Declared before the gate so non-admins can still call it.
-router.get("/access", protect, (req, res) => {
-  res.status(200).json({ open: !!isBoostOpenFor(req.user) });
+router.get("/access", protect, async (req, res) => {
+  try {
+    res.status(200).json({ open: !!(await isBoostOpenFor(req.user)) });
+  } catch (error) {
+    res.status(200).json({ open: false });
+  }
 });
 
 // Everything below requires login AND boost access.

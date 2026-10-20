@@ -1,12 +1,12 @@
 const axios = require("axios");
 const User = require("../models/User");
 const BoostOrder = require("../models/BoostOrder");
+const { getSetting, applyMarkup } = require("../services/settings");
 
 const OWLET_API_URL = process.env.OWLET_API_URL;
 const OWLET_API_KEY = process.env.OWLET_API_KEY;
 
-// Markup applied on top of Owlet's own NGN rate. Adjust freely.
-const BOOST_MARKUP = 1.4;
+// The markup percentage now lives in the admin "Pricing & Access" page.
 
 function owletForm(params) {
   return new URLSearchParams({ key: OWLET_API_KEY, ...params }).toString();
@@ -24,7 +24,7 @@ async function owletRequest(params) {
   return data;
 }
 
-// ── SERVICE CATALOG CACHE ─────────────────────
+// ---- SERVICE CATALOG CACHE ----
 let servicesCache = null;
 let servicesCacheAt = 0;
 const SERVICES_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
@@ -41,9 +41,9 @@ async function getOwletServices() {
   return services;
 }
 
-function toOption(svc) {
+function toOption(svc, markupPercent) {
   const rate = Number(svc.rate) || 0; // NGN per 1000, as returned by Owlet
-  const markedUpRate = Math.ceil(rate * BOOST_MARKUP);
+  const markedUpRate = applyMarkup(rate, markupPercent);
   return {
     id: String(svc.service),
     name: svc.name,
@@ -59,12 +59,13 @@ function priceForQuantity(ratePerThousand, quantity) {
   return Math.ceil((ratePerThousand / 1000) * quantity);
 }
 
-// ── GET SERVICES (public — browsing doesn't need login) ──
+// ---- GET SERVICES ----
 // GET /api/boost/services
 const getServices = async (req, res) => {
   try {
     const raw = await getOwletServices();
-    const options = raw.map(toOption);
+    const { markupPercent } = await getSetting("boost");
+    const options = raw.map((s) => toOption(s, markupPercent));
     res.status(200).json(options);
   } catch (error) {
     console.error("getServices failed:", error.message);
@@ -72,7 +73,7 @@ const getServices = async (req, res) => {
   }
 };
 
-// ── PLACE ORDER (atomic — same pattern as marketplace purchase) ──
+// ---- PLACE ORDER (atomic, same pattern as marketplace purchase) ----
 // POST /api/boost/order
 const createOrder = async (req, res) => {
   try {
@@ -91,17 +92,18 @@ const createOrder = async (req, res) => {
     if (!match) {
       return res.status(400).json({ message: "Service not found" });
     }
-    const svc = toOption(match);
+    const { markupPercent } = await getSetting("boost");
+    const svc = toOption(match, markupPercent);
 
     if (qty < svc.min || (svc.max && qty > svc.max)) {
       return res.status(400).json({
-        message: `Quantity must be between ${svc.min} and ${svc.max || "∞"} for this service`,
+        message: `Quantity must be between ${svc.min} and ${svc.max || "no limit"} for this service`,
       });
     }
 
     const price = priceForQuantity(svc.ratePerThousand, qty);
 
-    // Atomically charge the buyer — only succeeds if they actually have enough balance.
+    // Atomically charge the buyer, only succeeds if they actually have enough balance.
     const buyer = await User.findOneAndUpdate(
       { _id: req.user._id, balance: { $gte: price } },
       { $inc: { balance: -price } },
@@ -143,7 +145,7 @@ const createOrder = async (req, res) => {
         balance: buyer.balance,
       });
     } catch (owletError) {
-      // Owlet rejected the order — refund the user and mark it failed.
+      // Owlet rejected the order: refund the user and mark it failed.
       console.error("Owlet add order failed:", owletError.message);
       await User.findByIdAndUpdate(buyer._id, { $inc: { balance: price } });
       order.status = "failed";
@@ -158,7 +160,7 @@ const createOrder = async (req, res) => {
   }
 };
 
-// ── MY ORDERS ──────────────────────────────────
+// ---- MY ORDERS ----
 // GET /api/boost/orders/mine
 const getMyOrders = async (req, res) => {
   try {
@@ -169,7 +171,7 @@ const getMyOrders = async (req, res) => {
   }
 };
 
-// ── CHECK ORDER STATUS (live from Owlet, then syncs local record) ──
+// ---- CHECK ORDER STATUS (live from Owlet, then syncs local record) ----
 // GET /api/boost/orders/:id/status
 const getOrderStatus = async (req, res) => {
   try {

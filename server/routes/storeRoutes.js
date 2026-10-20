@@ -14,8 +14,12 @@ const { storeAccess, isStoreOpenFor } = require("../middleware/storeAccess");
 const router = express.Router();
 
 // Tells the frontend whether to show the store or "coming soon".
-router.get("/access", protect, (req, res) => {
-  res.status(200).json({ open: !!isStoreOpenFor(req.user) });
+router.get("/access", protect, async (req, res) => {
+  try {
+    res.status(200).json({ open: !!(await isStoreOpenFor(req.user)) });
+  } catch (error) {
+    res.status(200).json({ open: false });
+  }
 });
 
 // Everything below requires login AND store access.

@@ -4,9 +4,9 @@ const Transaction = require("../models/Transaction");
 const StoreOrder = require("../models/StoreOrder");
 const rocky = require("../services/rocky");
 const { encrypt, decrypt } = require("../utils/encryption");
+const { getSetting, applyMarkup } = require("../services/settings");
 
-// Markup on top of the supplier price. Adjust freely.
-const STORE_MARKUP = 1.3;
+// The markup percentage now lives in the admin "Pricing & Access" page.
 const MAX_QTY = 50;
 const CATALOG_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -24,6 +24,8 @@ const ALLOWED_IDS = (process.env.STORE_ALLOWED_PRODUCT_IDS || "")
   .filter((n) => Number.isInteger(n) && n > 0);
 
 // ---- CATALOG CACHE ----------------------------------
+// Caches supplier cost only. The selling price is computed per request
+// from the current markup setting.
 let catalogCache = null;
 let catalogAt = 0;
 
@@ -56,7 +58,6 @@ async function loadCatalog() {
         stock,
         inStock: stock > 0,
         cost,
-        unitPrice: Math.ceil(cost * STORE_MARKUP),
       });
     });
 
@@ -140,10 +141,14 @@ function safeDecrypt(text) {
 const getCatalog = async (req, res) => {
   try {
     const { categories, products } = await loadCatalog();
+    const { markupPercent } = await getSetting("store");
     const used = new Set(products.map((p) => p.categoryId));
     res.status(200).json({
       categories: categories.filter((c) => used.has(c.id)),
-      products: products.map(({ cost, ...rest }) => rest),
+      products: products.map(({ cost, ...rest }) => ({
+        ...rest,
+        unitPrice: applyMarkup(cost, markupPercent),
+      })),
     });
   } catch (error) {
     console.error("store catalog failed:", error.message);
@@ -184,7 +189,9 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ message: `Only ${product.stock} available right now` });
     }
 
-    const price = product.unitPrice * qty;
+    const { markupPercent } = await getSetting("store");
+    const unitPrice = applyMarkup(product.cost, markupPercent);
+    const price = unitPrice * qty;
 
     // Atomically charge the buyer, only if they have enough balance.
     const buyer = await User.findOneAndUpdate(
@@ -202,7 +209,7 @@ const createOrder = async (req, res) => {
         productName: product.name,
         categoryName: product.categoryName,
         quantity: qty,
-        unitPrice: product.unitPrice,
+        unitPrice,
         price,
         idempotencyKey: "danmus-" + crypto.randomUUID(),
         status: "pending",

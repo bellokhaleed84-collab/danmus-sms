@@ -13,6 +13,7 @@ const {
 } = require("../controllers/adminController");
 const { protect } = require("../middleware/authMiddleware");
 const { getDbStats, getBoostOrders, getStoreOrders } = require("../controllers/adminExtraController");
+const { getSettings, patchSetting } = require("../controllers/adminSettingsController");
 
 const adminOnly = (req, res, next) => {
   const adminEmails = process.env.ADMIN_EMAILS?.split(",") || [];
@@ -34,5 +35,7 @@ router.get("/locked-services", getLockedServices);
 router.get("/system/db-stats", protect, adminOnly, getDbStats);
 router.get("/boost/orders", protect, adminOnly, getBoostOrders);
 router.get("/store/orders", protect, adminOnly, getStoreOrders);
+router.get("/settings", protect, adminOnly, getSettings);
+router.patch("/settings/:key", protect, adminOnly, patchSetting);
 
 module.exports = router;

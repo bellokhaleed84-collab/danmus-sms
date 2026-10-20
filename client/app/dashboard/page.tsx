@@ -5,6 +5,7 @@ import Link from "next/link";
 import MobileNav from "@/components/MobileNav";
 import { useRouter } from "next/navigation";
 import API from "@/lib/api";
+import { txLabel } from "@/lib/txLabel";
 
 export default function DashboardPage() {
 
@@ -198,10 +199,10 @@ export default function DashboardPage() {
 
             </Link>
 
-            <Link href="/sms-history">
+            <Link href="/history">
 
               <div className="hover:bg-[var(--input)] px-5 py-4 rounded-2xl transition cursor-pointer">
-                SMS History
+                History
               </div>
 
             </Link>
@@ -459,7 +460,7 @@ export default function DashboardPage() {
 
               </Link>
 
-              <Link href="/sms-history">
+              <Link href="/history">
 
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer h-full">
 
@@ -468,11 +469,11 @@ export default function DashboardPage() {
                   </div>
 
                   <h3 className="text-xl md:text-2xl font-bold">
-                    SMS History
+                    History
                   </h3>
 
                   <p className="text-gray-400 mt-3 text-sm md:text-base leading-7">
-                    View all your OTP orders
+                    View all your orders
                   </p>
 
                 </div>
@@ -493,7 +494,7 @@ export default function DashboardPage() {
               </h2>
 
               <Link
-                href="/sms-history"
+                href="/history"
                 className="text-blue-500 hover:text-blue-400 text-sm md:text-base"
               >
                 View All
@@ -547,7 +548,7 @@ export default function DashboardPage() {
                     <div className="min-w-0">
 
                       <h3 className="font-semibold">
-                        {tx.description || (tx.type === "deposit" ? "Wallet Funding" : "SMS Purchase")}
+                        {txLabel(tx)}
                       </h3>
 
                       <p className="text-gray-400 text-sm mt-1 break-words leading-6">

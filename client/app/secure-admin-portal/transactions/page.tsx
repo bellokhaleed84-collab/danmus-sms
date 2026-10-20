@@ -43,7 +43,7 @@ export default function AdminTransactionsPage() {
       <div className="flex flex-col gap-4 mb-6 md:mb-8 md:flex-row md:items-center md:justify-between">
         <h1 className="text-2xl md:text-4xl font-bold">Transactions</h1>
         <div className="flex gap-2 md:gap-3 overflow-x-auto pb-1 -mx-1 px-1 md:flex-wrap md:overflow-visible">
-          {["all", "deposit", "sms_purchase", "marketplace_purchase"].map((f) => (
+          {["all", "deposit", "sms_purchase", "marketplace_purchase", "store_purchase"].map((f) => (
             <button
               key={f}
               onClick={() => setTxFilter(f)}
@@ -59,7 +59,9 @@ export default function AdminTransactionsPage() {
                 ? "Deposits"
                 : f === "sms_purchase"
                 ? "SMS"
-                : "Marketplace"}
+                : f === "marketplace_purchase"
+                ? "Marketplace"
+                : "Store"}
             </button>
           ))}
         </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import MobileNav from "@/components/MobileNav";
 import { useRouter } from "next/navigation";
 import API from "@/lib/api";
+import { txLabel } from "@/lib/txLabel";
 
 export default function WalletPage() {
 
@@ -64,7 +65,7 @@ export default function WalletPage() {
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalSpent = transactions
-    .filter((t) => t.type === "sms_purchase" && t.status === "successful")
+    .filter((t) => (t.type === "sms_purchase" && t.status === "successful") || (t.type === "store_purchase" && t.status === "successful" && !t.refunded))
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalTransactions = transactions.length;
@@ -159,7 +160,7 @@ export default function WalletPage() {
               </div>
             </Link>
 
-            <Link href="/sms-history">
+            <Link href="/history">
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 hover:scale-105 transition shadow-xl cursor-pointer">
                 <div className="text-5xl mb-5">{"\uD83D\uDCE9"}</div>
                 <h3 className="text-2xl font-bold">Transaction History</h3>
@@ -174,7 +175,7 @@ export default function WalletPage() {
 
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl md:text-3xl font-bold">Recent Transactions</h2>
-            <Link href="/sms-history" className="text-blue-500 hover:text-blue-400">
+            <Link href="/history" className="text-blue-500 hover:text-blue-400">
               View All
             </Link>
           </div>
@@ -196,7 +197,7 @@ export default function WalletPage() {
                 >
                   <div>
                     <h4 className="font-semibold">
-                      {tx.description || (tx.type === "deposit" ? "Wallet Funding" : "SMS Purchase")}
+                      {txLabel(tx)}
                     </h4>
                     <p className="text-gray-400 text-sm mt-1">
                       {new Date(tx.createdAt).toLocaleString()}

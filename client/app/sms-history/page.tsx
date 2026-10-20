@@ -27,6 +27,7 @@ import {
   FaMessage,
   FaCartShopping,
   FaRocket,
+  FaStore,
 } from "react-icons/fa6";
 
 const platformIcons: any = {
@@ -55,19 +56,21 @@ const platformIcons: any = {
   other: <FaLink className="text-gray-400" />,
 };
 
+type ReceiptStatus = "Completed" | "Pending" | "Not Successful" | "Refunded";
+
 type Receipt = {
   id: string;
-  type: "sms" | "purchase" | "boost";
+  type: "sms" | "purchase" | "boost" | "store";
   icon: React.ReactNode;
   title: string;
   subtitle: string;
   detail: string;
-  status: "Completed" | "Pending" | "Not Successful";
+  status: ReceiptStatus;
   date: string;
   href: string;
 };
 
-function getSmsStatus(sms: any): "Completed" | "Pending" | "Not Successful" {
+function getSmsStatus(sms: any): ReceiptStatus {
   if (sms.otp || sms.status === "successful") return "Completed";
   if (sms.status === "not_successful" || sms.status === "failed") return "Not Successful";
   // Auto-mark as Not Successful after 30 minutes
@@ -76,13 +79,20 @@ function getSmsStatus(sms: any): "Completed" | "Pending" | "Not Successful" {
   return "Pending";
 }
 
-function getBoostStatus(status: string): "Completed" | "Pending" | "Not Successful" {
+function getBoostStatus(status: string): ReceiptStatus {
   if (status === "completed") return "Completed";
   if (["failed", "canceled", "refunded", "partial"].includes(status)) return "Not Successful";
   return "Pending";
 }
 
-export default function SmsHistoryPage() {
+function getStoreStatus(tx: any): ReceiptStatus {
+  if (tx.refunded) return "Refunded";
+  if (tx.status === "pending") return "Pending";
+  if (tx.status === "failed" || tx.status === "not_successful") return "Not Successful";
+  return "Completed";
+}
+
+export default function HistoryPage() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -90,12 +100,15 @@ export default function SmsHistoryPage() {
     async function fetchAll() {
       const token = localStorage.getItem("token");
 
-      const [smsRes, purchaseRes, boostRes] = await Promise.allSettled([
+      const [smsRes, purchaseRes, boostRes, walletRes] = await Promise.allSettled([
         API.get("/sms/history"),
         API.get("/listings/my-purchases", {
           headers: { Authorization: `Bearer ${token}` },
         }),
         API.get("/boost/orders/mine", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        API.get("/wallet/transactions", {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -148,9 +161,32 @@ export default function SmsHistoryPage() {
             }))
           : [];
 
-      const merged = [...smsReceipts, ...purchaseReceipts, ...boostReceipts].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
+      // Store purchases come from wallet transactions; paymentReference = store order id
+      const storeReceipts: Receipt[] =
+        walletRes.status === "fulfilled" && Array.isArray(walletRes.value.data)
+          ? walletRes.value.data
+              .filter((t: any) => t.type === "store_purchase")
+              .map((t: any) => ({
+                id: t._id,
+                type: "store" as const,
+                icon: <FaStore className="text-emerald-400" />,
+                title: t.description || "Store Purchase",
+                subtitle: "Accounts Store",
+                detail: `\u20A6${Number(t.amount).toLocaleString()}`,
+                status: getStoreStatus(t),
+                date: t.createdAt,
+                href: t.paymentReference
+                  ? `/marketplace/store/orders/${t.paymentReference}`
+                  : "/marketplace/store/orders",
+              }))
+          : [];
+
+      const merged = [
+        ...smsReceipts,
+        ...purchaseReceipts,
+        ...boostReceipts,
+        ...storeReceipts,
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setReceipts(merged);
       setLoading(false);
@@ -162,7 +198,9 @@ export default function SmsHistoryPage() {
   const totalOrders = receipts.length;
   const completedOrders = receipts.filter((r) => r.status === "Completed").length;
   const pendingOrders = receipts.filter((r) => r.status === "Pending").length;
-  const failedOrders = receipts.filter((r) => r.status === "Not Successful").length;
+  const failedOrders = receipts.filter(
+    (r) => r.status === "Not Successful" || r.status === "Refunded"
+  ).length;
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all duration-300 pb-28 md:pb-0 overflow-x-hidden">
@@ -179,7 +217,7 @@ export default function SmsHistoryPage() {
           <div>
             <h1 className="text-3xl md:text-5xl font-bold">History</h1>
             <p className="text-gray-400 mt-3 text-sm md:text-lg">
-              All your OTP orders, boosts and marketplace purchases in one place
+              All your OTP orders, boosts, marketplace and store purchases in one place
             </p>
           </div>
           <Link href="/dashboard">
@@ -275,6 +313,8 @@ export default function SmsHistoryPage() {
                               ? "bg-green-500/20 text-green-500"
                               : r.status === "Not Successful"
                               ? "bg-red-500/20 text-red-500"
+                              : r.status === "Refunded"
+                              ? "bg-blue-500/20 text-blue-400"
                               : "bg-yellow-500/20 text-yellow-500"
                           }`}
                         >

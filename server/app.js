@@ -11,6 +11,8 @@ const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const listingRoutes = require("./routes/listingRoutes");
 const boostRoutes = require("./routes/boostRoutes");
+const squadRoutes = require("./routes/squadRoutes"); // SQUAD (edit 1)
+const { webhook: squadWebhook } = require("./controllers/squadController"); // SQUAD (edit 1)
 const { generalLimiter } = require("./middleware/rateLimiter");
 
 const app = express();
@@ -43,6 +45,14 @@ app.use(
 
 app.options(/.*/, cors());
 
+// SQUAD (edit 2): webhook needs the RAW body to verify the signature,
+// so it must come BEFORE express.json()
+app.post(
+  "/api/squad/webhook",
+  express.raw({ type: "*/*", limit: "1mb" }),
+  squadWebhook
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -71,5 +81,6 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/boost", boostRoutes);
+app.use("/api/squad", squadRoutes); // SQUAD (edit 3)
 
 module.exports = app;

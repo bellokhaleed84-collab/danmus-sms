@@ -6,7 +6,7 @@ const OWLET_API_URL = process.env.OWLET_API_URL;
 const OWLET_API_KEY = process.env.OWLET_API_KEY;
 
 // Markup applied on top of Owlet's own NGN rate. Adjust freely.
-const BOOST_MARKUP = 1.3;
+const BOOST_MARKUP = 1.4;
 
 function owletForm(params) {
   return new URLSearchParams({ key: OWLET_API_KEY, ...params }).toString();

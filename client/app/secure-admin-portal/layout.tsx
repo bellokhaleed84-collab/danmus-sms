@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/secure-admin-portal/transactions", label: "Transactions" },
   { href: "/secure-admin-portal/listings", label: "Listings" },
   { href: "/secure-admin-portal/service-controls", label: "Service Controls" },
+  { href: "/secure-admin-portal/pricing", label: "Pricing & Access" },
   { href: "/secure-admin-portal/boost", label: "Boost" },
   { href: "/secure-admin-portal/store", label: "Store" },
   { href: "/secure-admin-portal/system", label: "System" },

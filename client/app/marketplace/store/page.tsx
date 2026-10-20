@@ -14,6 +14,7 @@ type Product = {
   description: string;
   image: string;
   inStock: boolean;
+  stock: number;
   unitPrice: number;
 };
 
@@ -126,6 +127,7 @@ export default function StorePage() {
   }
 
   const total = selected ? selected.unitPrice * qty : 0;
+  const maxForSelected = selected ? Math.min(MAX_QTY, selected.stock) : MAX_QTY;
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
@@ -237,15 +239,17 @@ export default function StorePage() {
               {"\u20A6"}{selected.unitPrice.toLocaleString()} each
             </p>
 
-            <label className="block text-gray-400 text-sm mt-5 mb-2">Quantity (max {MAX_QTY})</label>
+            <label className="block text-gray-400 text-sm mt-5 mb-2">
+              Quantity (max {maxForSelected})
+            </label>
             <input
               type="number"
               min={1}
-              max={MAX_QTY}
+              max={maxForSelected}
               value={qty}
               onChange={(e) => {
                 const n = Math.floor(Number(e.target.value));
-                setQty(Number.isFinite(n) ? Math.min(MAX_QTY, Math.max(1, n)) : 1);
+                setQty(Number.isFinite(n) ? Math.min(maxForSelected, Math.max(1, n)) : 1);
               }}
               className="w-full bg-[var(--input)] border border-[var(--border)] rounded-xl px-4 py-3 outline-none"
             />

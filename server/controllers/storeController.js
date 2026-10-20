@@ -10,6 +10,19 @@ const STORE_MARKUP = 1.3;
 const MAX_QTY = 50;
 const CATALOG_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Rocky's in_stock is a quantity, not a 0/1 flag.
+function parseStock(p) {
+  const n = Number(p.in_stock !== undefined ? p.in_stock : p.stock);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+// Optional allowlist: STORE_ALLOWED_PRODUCT_IDS=1,4,7 (Render env var).
+// If unset or empty, all active products are shown.
+const ALLOWED_IDS = (process.env.STORE_ALLOWED_PRODUCT_IDS || "")
+  .split(",")
+  .map((s) => Number(s.trim()))
+  .filter((n) => Number.isInteger(n) && n > 0);
+
 // ---- CATALOG CACHE ----------------------------------
 let catalogCache = null;
 let catalogAt = 0;
@@ -30,7 +43,9 @@ async function loadCatalog() {
     prods.forEach((p) => {
       const cost = Number(p.price);
       if (p.status && p.status !== "active") return;
+      if (ALLOWED_IDS.length && !ALLOWED_IDS.includes(Number(p.id))) return;
       if (!Number.isFinite(cost) || cost <= 0) return;
+      const stock = parseStock(p);
       products.push({
         id: Number(p.id),
         categoryId: Number(p.category_id),
@@ -38,7 +53,8 @@ async function loadCatalog() {
         name: p.name,
         description: p.description || "",
         image: p.image || "",
-        inStock: Number(p.in_stock) === 1,
+        stock,
+        inStock: stock > 0,
         cost,
         unitPrice: Math.ceil(cost * STORE_MARKUP),
       });
@@ -164,6 +180,9 @@ const createOrder = async (req, res) => {
     const product = catalog.products.find((p) => p.id === productId);
     if (!product) return res.status(400).json({ message: "Item not found" });
     if (!product.inStock) return res.status(400).json({ message: "This item is out of stock" });
+    if (qty > product.stock) {
+      return res.status(400).json({ message: `Only ${product.stock} available right now` });
+    }
 
     const price = product.unitPrice * qty;
 

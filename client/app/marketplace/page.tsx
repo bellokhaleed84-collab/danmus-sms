@@ -60,6 +60,19 @@ export default function MarketplacePage() {
           </div>
         </div>
 
+        {/* INSTANT STORE BANNER */}
+        <Link href="/marketplace/store">
+          <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/40 rounded-3xl p-5 mb-8 flex items-center justify-between hover:border-blue-500 transition cursor-pointer">
+            <div>
+              <p className="font-bold text-lg">Instant Accounts Store</p>
+              <p className="text-gray-400 text-sm mt-1">
+                Ready-made accounts delivered instantly to your receipt page
+              </p>
+            </div>
+            <span className="text-blue-400 font-semibold whitespace-nowrap">Open {"\u2192"}</span>
+          </div>
+        </Link>
+
         {/* FILTER */}
         <div className="flex gap-3 mb-8 overflow-x-auto pb-2">
           {["", "instagram", "facebook", "tiktok", "twitter", "telegram", "whatsapp"].map((p) => (
@@ -103,7 +116,7 @@ export default function MarketplacePage() {
                       {listing.followers?.toLocaleString()} followers
                     </span>
                     <span className="text-blue-500 font-bold text-lg">
-                      ₦{listing.price?.toLocaleString()}
+                      {"\u20A6"}{listing.price?.toLocaleString()}
                     </span>
                   </div>
                 </div>

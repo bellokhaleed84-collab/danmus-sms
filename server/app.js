@@ -11,18 +11,19 @@ const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const listingRoutes = require("./routes/listingRoutes");
 const boostRoutes = require("./routes/boostRoutes");
+const storeRoutes = require("./routes/storeRoutes"); // STORE
 const squadRoutes = require("./routes/squadRoutes"); // SQUAD (edit 1)
 const { webhook: squadWebhook } = require("./controllers/squadController"); // SQUAD (edit 1)
 const { generalLimiter } = require("./middleware/rateLimiter");
 
 const app = express();
 
-// Render sits behind exactly one proxy layer — trust it so express-rate-limit
+// Render sits behind exactly one proxy layer - trust it so express-rate-limit
 // (and anything else reading req.ip) sees the real client IP instead of
 // throwing the X-Forwarded-For validation warning.
 app.set("trust proxy", 1);
 
-// ── CORS — restricted to known origins ────────
+// -- CORS - restricted to known origins --------
 const allowedOrigins = [
   "https://danmussms.com",
   "https://www.danmussms.com",
@@ -66,7 +67,7 @@ app.use(
 
 app.use(passport.initialize());
 
-// ── Rate limiting (after CORS so error responses still carry CORS headers) ──
+// -- Rate limiting (after CORS so error responses still carry CORS headers) --
 app.use("/api", generalLimiter);
 
 app.get("/", (req, res) => {
@@ -81,6 +82,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/boost", boostRoutes);
+app.use("/api/store", storeRoutes); // STORE
 app.use("/api/squad", squadRoutes); // SQUAD (edit 3)
 
 module.exports = app;

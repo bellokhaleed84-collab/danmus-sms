@@ -5,8 +5,13 @@ const {
   rentNumber,
   getMyRentals,
   getMessages,
-  getAdminRentals,
 } = require("../controllers/numberController");
+const {
+  getRentals,
+  syncRental,
+  adminRefund,
+  releaseRental,
+} = require("../controllers/numberAdminController");
 const { protect, isAdmin } = require("../middleware/authMiddleware");
 const { numbersAccess, isNumbersOpenFor } = require("../middleware/numbersAccess");
 
@@ -29,8 +34,14 @@ router.use(protect, numbersAccess);
 router.get("/countries", getCountries);
 router.get("/available", getAvailable);
 router.get("/mine", getMyRentals); // must come before /:id/messages
-router.get("/admin/rentals", isAdmin, getAdminRentals);
 router.post("/rent", rentNumber);
+
+// Admin tools
+router.get("/admin/rentals", isAdmin, getRentals);
+router.post("/admin/rentals/:id/sync", isAdmin, syncRental);
+router.post("/admin/rentals/:id/refund", isAdmin, adminRefund);
+router.post("/admin/rentals/:id/release", isAdmin, releaseRental);
+
 router.get("/:id/messages", getMessages);
 
 module.exports = router;

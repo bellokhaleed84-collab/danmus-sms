@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/secure-admin-portal/pricing", label: "Pricing & Access" },
   { href: "/secure-admin-portal/boost", label: "Boost" },
   { href: "/secure-admin-portal/store", label: "Store" },
+  { href: "/secure-admin-portal/numbers", label: "Numbers" },
   { href: "/secure-admin-portal/system", label: "System" },
 ];
 

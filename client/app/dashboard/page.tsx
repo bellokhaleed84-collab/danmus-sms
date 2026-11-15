@@ -6,10 +6,13 @@ import MobileNav from "@/components/MobileNav";
 import { useRouter } from "next/navigation";
 import API from "@/lib/api";
 import { txLabel } from "@/lib/txLabel";
+import { useNumbersAccess } from "@/lib/useNumbersAccess";
 
 export default function DashboardPage() {
 
   const router = useRouter();
+
+  const numbersOpen = useNumbersAccess();
 
   const [balance, setBalance] = useState(0);
   const [username, setUsername] = useState("User");
@@ -63,7 +66,7 @@ export default function DashboardPage() {
 
         if (!response.ok) {
 
-          /* DON'T LOGOUT ON 401 — JUST USE CACHED DATA */
+          /* DON'T LOGOUT ON 401 - JUST USE CACHED DATA */
           console.log("Profile fetch failed, using cached data");
 
           return;
@@ -174,6 +177,18 @@ export default function DashboardPage() {
               </div>
 
             </Link>
+
+            {numbersOpen && (
+
+              <Link href="/numbers">
+
+                <div className="hover:bg-[var(--input)] px-5 py-4 rounded-2xl transition cursor-pointer">
+                  Rent Number
+                </div>
+
+              </Link>
+
+            )}
 
             <Link href="/marketplace">
 
@@ -287,7 +302,7 @@ export default function DashboardPage() {
             </p>
 
             <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold mt-4 break-words leading-tight">
-              ₦{Number(balance).toLocaleString()}
+              {"\u20A6"}{Number(balance).toLocaleString()}
             </h2>
 
             <div className="flex flex-wrap gap-3 md:gap-4 mt-6 md:mt-8">
@@ -385,7 +400,7 @@ export default function DashboardPage() {
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer h-full">
 
                   <div className="text-4xl md:text-5xl mb-4 md:mb-5">
-                    📱
+                    {"\uD83D\uDCF1"}
                   </div>
 
                   <h3 className="text-xl md:text-2xl font-bold">
@@ -400,12 +415,36 @@ export default function DashboardPage() {
 
               </Link>
 
+              {numbersOpen && (
+
+                <Link href="/numbers">
+
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer h-full">
+
+                    <div className="text-4xl md:text-5xl mb-4 md:mb-5">
+                      {"\uD83D\uDCDE"}
+                    </div>
+
+                    <h3 className="text-xl md:text-2xl font-bold">
+                      Rent Number
+                    </h3>
+
+                    <p className="text-gray-400 mt-3 text-sm md:text-base leading-7">
+                      Keep a number for a month to receive SMS
+                    </p>
+
+                  </div>
+
+                </Link>
+
+              )}
+
               <Link href="/marketplace">
 
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer h-full">
 
                   <div className="text-4xl md:text-5xl mb-4 md:mb-5">
-                    🛒
+                    {"\uD83D\uDED2"}
                   </div>
 
                   <h3 className="text-xl md:text-2xl font-bold">
@@ -425,7 +464,7 @@ export default function DashboardPage() {
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer h-full">
 
                   <div className="text-4xl md:text-5xl mb-4 md:mb-5">
-                    🚀
+                    {"\uD83D\uDE80"}
                   </div>
 
                   <h3 className="text-xl md:text-2xl font-bold">
@@ -445,7 +484,7 @@ export default function DashboardPage() {
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer h-full">
 
                   <div className="text-4xl md:text-5xl mb-4 md:mb-5">
-                    💳
+                    {"\uD83D\uDCB3"}
                   </div>
 
                   <h3 className="text-xl md:text-2xl font-bold">
@@ -465,7 +504,7 @@ export default function DashboardPage() {
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 hover:scale-[1.02] md:hover:scale-105 transition shadow-xl cursor-pointer h-full">
 
                   <div className="text-4xl md:text-5xl mb-4 md:mb-5">
-                    📩
+                    {"\uD83D\uDCE9"}
                   </div>
 
                   <h3 className="text-xl md:text-2xl font-bold">
@@ -562,7 +601,7 @@ export default function DashboardPage() {
                       <span className={`font-bold ${
                         tx.type === "deposit" ? "text-green-500" : "text-red-400"
                       }`}>
-                        {tx.type === "deposit" ? "+" : "-"}₦{Number(tx.amount).toLocaleString()}
+                        {tx.type === "deposit" ? "+" : "-"}{"\u20A6"}{Number(tx.amount).toLocaleString()}
                       </span>
 
                       <span className={`px-4 py-2 rounded-xl text-sm w-fit ${

@@ -9,6 +9,8 @@ export function txLabel(tx: any): string {
       return "Marketplace Purchase";
     case "store_purchase":
       return "Store Purchase";
+    case "number_rental":
+      return "Number Rental";
     default:
       return "Transaction";
   }

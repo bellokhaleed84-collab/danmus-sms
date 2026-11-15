@@ -11,9 +11,12 @@ const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const listingRoutes = require("./routes/listingRoutes");
 const boostRoutes = require("./routes/boostRoutes");
+const paymentSettingsRoutes = require("./routes/paymentSettingsRoutes");
 const storeRoutes = require("./routes/storeRoutes"); // STORE
 const squadRoutes = require("./routes/squadRoutes"); // SQUAD (edit 1)
 const { webhook: squadWebhook } = require("./controllers/squadController"); // SQUAD (edit 1)
+const numberRoutes = require("./routes/numberRoutes"); // NUMBERS
+const { webhook: numberWebhook } = require("./controllers/numberController"); // NUMBERS
 const { generalLimiter } = require("./middleware/rateLimiter");
 
 const app = express();
@@ -54,6 +57,13 @@ app.post(
   squadWebhook
 );
 
+// NUMBERS: Telnyx webhook also needs the RAW body (Ed25519 signature)
+app.post(
+  "/api/numbers/webhook",
+  express.raw({ type: "*/*", limit: "1mb" }),
+  numberWebhook
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -82,7 +92,9 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/boost", boostRoutes);
+app.use("/api/payment-settings", paymentSettingsRoutes);
 app.use("/api/store", storeRoutes); // STORE
 app.use("/api/squad", squadRoutes); // SQUAD (edit 3)
+app.use("/api/numbers", numberRoutes); // NUMBERS
 
 module.exports = app;

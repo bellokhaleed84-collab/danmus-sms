@@ -4,6 +4,7 @@ const Setting = require("../models/Setting");
 const DEFINITIONS = {
   boost: { label: "Boost", envFlag: "BOOST_PUBLIC", defaultMarkup: 40 },
   store: { label: "Account Store", envFlag: "STORE_PUBLIC", defaultMarkup: 30 },
+  numbers: { label: "Number Rental", envFlag: "NUMBERS_PUBLIC", defaultMarkup: 60 },
 };
 
 const CACHE_MS = 10 * 1000;

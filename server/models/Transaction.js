@@ -10,7 +10,7 @@ const transactionSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["deposit", "sms_purchase", "marketplace_purchase", "store_purchase"],
+      enum: ["deposit", "sms_purchase", "marketplace_purchase", "store_purchase", "number_rental"],
       required: true,
     },
 

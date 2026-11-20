@@ -7,6 +7,7 @@ type Setting = {
   key: string;
   label: string;
   enabled: boolean;
+  markupOnly?: boolean;
   markupPercent: number;
   source: string;
   minMarkup: number;
@@ -76,8 +77,8 @@ export default function AdminPricingPage() {
     <>
       <h1 className="text-2xl md:text-4xl font-bold mb-3">Pricing & Access</h1>
       <p className="text-gray-400 text-sm mb-8">
-        Switch a feature on for all users, and set its markup. Each feature has its own markup. Changes apply within
-        about 10 seconds and only affect new orders.
+        Switch a feature on for all users, and set its markup. Each feature and each SMS provider has its own markup.
+        Changes apply within about 10 seconds and only affect new orders.
       </p>
 
       {error && (
@@ -107,34 +108,42 @@ export default function AdminPricingPage() {
                     {s.source === "database" ? "Controlled from this page" : "Using default settings (not saved yet)"}
                   </p>
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap ${
-                    s.enabled ? "bg-green-500/20 text-green-500" : "bg-yellow-500/20 text-yellow-500"
-                  }`}
-                >
-                  {s.enabled ? "Live for all users" : "Admins only"}
-                </span>
+                {s.markupOnly ? (
+                  <span className="px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap bg-blue-500/20 text-blue-400">
+                    Markup only
+                  </span>
+                ) : (
+                  <span
+                    className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap ${
+                      s.enabled ? "bg-green-500/20 text-green-500" : "bg-yellow-500/20 text-yellow-500"
+                    }`}
+                  >
+                    {s.enabled ? "Live for all users" : "Admins only"}
+                  </span>
+                )}
               </div>
 
-              <button
-                onClick={() =>
-                  save(
-                    s.key,
-                    { enabled: !s.enabled },
-                    s.enabled
-                      ? `Switch ${s.label} OFF? Only admins will be able to use it.`
-                      : `Switch ${s.label} ON for ALL users? They will be able to spend real money from their wallets.`
-                  )
-                }
-                disabled={isBusy}
-                className={`w-full py-3 rounded-2xl font-bold transition disabled:opacity-50 ${
-                  s.enabled ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
-                }`}
-              >
-                {isBusy ? "..." : s.enabled ? "Turn OFF (admins only)" : "Turn ON for all users"}
-              </button>
+              {!s.markupOnly && (
+                <button
+                  onClick={() =>
+                    save(
+                      s.key,
+                      { enabled: !s.enabled },
+                      s.enabled
+                        ? `Switch ${s.label} OFF? Only admins will be able to use it.`
+                        : `Switch ${s.label} ON for ALL users? They will be able to spend real money from their wallets.`
+                    )
+                  }
+                  disabled={isBusy}
+                  className={`w-full py-3 rounded-2xl font-bold transition disabled:opacity-50 ${
+                    s.enabled ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
+                  }`}
+                >
+                  {isBusy ? "..." : s.enabled ? "Turn OFF (admins only)" : "Turn ON for all users"}
+                </button>
+              )}
 
-              <div className="mt-8">
+              <div className={s.markupOnly ? "" : "mt-8"}>
                 <p className="text-gray-400 text-sm mb-3">Markup on supplier price</p>
                 <div className="flex items-center justify-center gap-2 md:gap-3">
                   <button onClick={() => bump(-5)} className="bg-[var(--input)] border border-[var(--border)] px-3 py-2 rounded-xl font-semibold text-sm">

@@ -3,11 +3,12 @@ const Transaction = require("../models/Transaction");
 const ServiceControl = require("../models/ServiceControl");
 const PriceCache = require("../models/PriceCache");
 const axios = require("axios");
+const { getSetting, applyMarkup } = require("../services/settings");
 
 const FIVESIM_API = "https://5sim.net/v1";
 const GRIZZLY_API = "https://api.grizzlysms.com/stubs/handler_api.php";
 const SMSPOOL_API = "https://api.smspool.net";
-const MARKUP = 1.8;
+const DEFAULT_MARKUP_PERCENT = 80;
 
 const fivesimHeaders = {
   Authorization: `Bearer ${process.env.FIVESIM_API_KEY}`,
@@ -16,6 +17,25 @@ const fivesimHeaders = {
 
 const PROVIDER_LABELS = { smspool: "Provider 1", fivesim: "Provider 2", grizzly: "Provider 3" };
 const PROVIDER_ORDER = ["smspool", "fivesim", "grizzly"];
+
+// Admin dashboard (Pricing & Access) controls the markup for each provider.
+const MARKUP_KEYS = {
+  smspool: "provider_smspool",
+  fivesim: "provider_fivesim",
+  grizzly: "provider_grizzly",
+};
+
+async function getMarkupPercent(provider) {
+  const key = MARKUP_KEYS[provider];
+  if (!key) return DEFAULT_MARKUP_PERCENT;
+  try {
+    const s = await getSetting(key);
+    return s.markupPercent;
+  } catch (e) {
+    console.log("markup read failed:", e.message);
+    return DEFAULT_MARKUP_PERCENT;
+  }
+}
 
 const SERVICE_ESTIMATE_RANGES = {
   whatsapp: { min: 1500, max: 3000 },
@@ -73,7 +93,8 @@ function parseHandlerApiResponse(data) {
 // ---- Grizzly live price (asked BEFORE buying) ----
 // Grizzly's getPrices returns { "<country>": { "<service>": { count, cost } } }.
 // We cache answers for 2 minutes (and failures for 30 seconds) so the list
-// does not hit Grizzly on every click.
+// does not hit Grizzly on every click. The cache holds the USD cost only,
+// so a markup change from the admin page shows up right away.
 const grizzlyPriceCache = new Map();
 const GRIZZLY_PRICE_TTL = 2 * 60 * 1000;
 const GRIZZLY_FAIL_TTL = 30 * 1000;
@@ -195,6 +216,7 @@ const getProviderProducts = async (req, res) => {
   const { provider, country } = req.params;
   try {
     const usdToNgn = await getUsdToNgnRate();
+    const markupPercent = await getMarkupPercent(provider);
 
     const lockedItems = await ServiceControl.find({ locked: true });
     const lockedKeys = lockedItems.map((item) => item.key.toLowerCase());
@@ -216,7 +238,7 @@ const getProviderProducts = async (req, res) => {
         .map((s) => ({
           value: s,
           label: s,
-          price: Math.ceil(response.data[s].Price * usdToNgn * MARKUP),
+          price: applyMarkup(response.data[s].Price * usdToNgn, markupPercent),
           qty: response.data[s].Qty,
         }));
       return res.status(200).json(list);
@@ -240,7 +262,7 @@ const getProviderProducts = async (req, res) => {
           list.push({
             value: slug,
             label: slug,
-            price: Math.ceil(l.usd * usdToNgn * MARKUP),
+            price: applyMarkup(l.usd * usdToNgn, markupPercent),
             qty: l.count ?? 1,
           });
           return;
@@ -283,7 +305,7 @@ const getProviderProducts = async (req, res) => {
           .map(([serviceId, { usd, name }]) => ({
             value: serviceId,
             label: name,
-            price: Math.ceil(usd * usdToNgn * MARKUP),
+            price: applyMarkup(usd * usdToNgn, markupPercent),
             qty: 1,
           }))
           .filter((s) => notLocked(s.label));
@@ -349,6 +371,7 @@ const buySMS = async (req, res) => {
     }
 
     const usdToNgn = await getUsdToNgnRate();
+    const markupPercent = await getMarkupPercent(provider);
     let order = null;
     let smsCost = null;
 
@@ -367,7 +390,7 @@ const buySMS = async (req, res) => {
             : data?.errors?.[0]?.message || "Provider 1 could not fulfil this order right now.";
         return res.status(400).json({ message: reason });
       }
-      smsCost = Math.ceil(Number(data.cost) * usdToNgn * MARKUP);
+      smsCost = applyMarkup(Number(data.cost) * usdToNgn, markupPercent);
       order = {
         id: String(data.order_id),
         phone: `${data.cc || ""}${data.phonenumber}`,
@@ -392,7 +415,7 @@ const buySMS = async (req, res) => {
       if (!data?.id || !data?.phone || data.phone === "" || data.phone.includes("no free")) {
         return res.status(400).json({ message: "Provider 2 has no numbers available right now." });
       }
-      smsCost = Math.ceil(Number(data.price) * usdToNgn * MARKUP);
+      smsCost = applyMarkup(Number(data.price) * usdToNgn, markupPercent);
       order = {
         id: String(data.id),
         phone: data.phone,
@@ -414,7 +437,7 @@ const buySMS = async (req, res) => {
             message: "Provider 3 has no numbers available right now for this selection.",
           });
         }
-        expectedCost = Math.ceil(live.usd * usdToNgn * MARKUP);
+        expectedCost = applyMarkup(live.usd * usdToNgn, markupPercent);
       } else {
         const cachedRow = await PriceCache.findOne({ provider: "grizzly", country, service }).lean();
         if (cachedRow) expectedCost = cachedRow.priceNgn;
@@ -491,7 +514,7 @@ const buySMS = async (req, res) => {
         });
       }
 
-      smsCost = Math.ceil(grizzlyUsdCost * usdToNgn * MARKUP);
+      smsCost = applyMarkup(grizzlyUsdCost * usdToNgn, markupPercent);
       order = { id: parsed.id, phone: parsed.phone, country, service, price: smsCost };
       PriceCache.findOneAndUpdate(
         { provider: "grizzly", country, service },

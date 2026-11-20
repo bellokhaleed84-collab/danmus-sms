@@ -1,10 +1,14 @@
 const Setting = require("../models/Setting");
 
 // Fallbacks used until an admin saves a setting for that feature.
+// markupOnly = no on/off switch on the admin page, only a markup percent.
 const DEFINITIONS = {
   boost: { label: "Boost", envFlag: "BOOST_PUBLIC", defaultMarkup: 40 },
   store: { label: "Account Store", envFlag: "STORE_PUBLIC", defaultMarkup: 30 },
   numbers: { label: "Number Rental", envFlag: "NUMBERS_PUBLIC", defaultMarkup: 60 },
+  provider_smspool: { label: "Provider 1 (SMSPool)", defaultMarkup: 80, markupOnly: true },
+  provider_fivesim: { label: "Provider 2 (5sim)", defaultMarkup: 80, markupOnly: true },
+  provider_grizzly: { label: "Provider 3 (Grizzly)", defaultMarkup: 80, markupOnly: true },
 };
 
 const CACHE_MS = 10 * 1000;
@@ -25,7 +29,7 @@ function isValidMarkup(n) {
 function defaults(key) {
   const d = DEFINITIONS[key];
   return {
-    enabled: process.env[d.envFlag] === "true",
+    enabled: d.markupOnly ? true : process.env[d.envFlag] === "true",
     markupPercent: d.defaultMarkup,
     source: "default",
   };
@@ -36,7 +40,7 @@ async function readFresh(key) {
   const doc = await Setting.findOne({ key }).lean();
   if (!doc) return base;
   return {
-    enabled: !!doc.enabled,
+    enabled: DEFINITIONS[key].markupOnly ? true : !!doc.enabled,
     markupPercent: isValidMarkup(doc.markupPercent) ? doc.markupPercent : base.markupPercent,
     source: "database",
   };
@@ -47,6 +51,7 @@ function describe(key, state) {
     key,
     label: DEFINITIONS[key].label,
     enabled: state.enabled,
+    markupOnly: !!DEFINITIONS[key].markupOnly,
     markupPercent: state.markupPercent,
     source: state.source,
     minMarkup: MIN_MARKUP,
@@ -85,7 +90,7 @@ async function updateSetting(key, patch) {
   const current = await readFresh(key);
   const next = { enabled: current.enabled, markupPercent: current.markupPercent };
 
-  if (body.enabled !== undefined) {
+  if (body.enabled !== undefined && !DEFINITIONS[key].markupOnly) {
     if (typeof body.enabled !== "boolean") throw httpError(400, "enabled must be true or false");
     next.enabled = body.enabled;
   }

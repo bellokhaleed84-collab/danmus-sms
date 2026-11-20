@@ -70,7 +70,58 @@ function parseHandlerApiResponse(data) {
   return { status: data };
 }
 
-// ── PROVIDER-SCOPED COUNTRIES ─────────────────
+// ---- Grizzly live price (asked BEFORE buying) ----
+// Grizzly's getPrices returns { "<country>": { "<service>": { count, cost } } }.
+// We cache answers for 2 minutes (and failures for 30 seconds) so the list
+// does not hit Grizzly on every click.
+const grizzlyPriceCache = new Map();
+const GRIZZLY_PRICE_TTL = 2 * 60 * 1000;
+const GRIZZLY_FAIL_TTL = 30 * 1000;
+
+// Returns { usd, count } or null when Grizzly gave no usable answer.
+async function getGrizzlyLivePrice(country, code, fresh = false) {
+  const key = `${country}:${code}`;
+  const hit = grizzlyPriceCache.get(key);
+  if (!fresh && hit) {
+    const ttl = hit.value ? GRIZZLY_PRICE_TTL : GRIZZLY_FAIL_TTL;
+    if (Date.now() - hit.at < ttl) return hit.value;
+  }
+
+  let value = null;
+  try {
+    const response = await axios.get(GRIZZLY_API, {
+      params: {
+        api_key: process.env.GRIZZLY_API_KEY,
+        action: "getPrices",
+        service: code,
+        country,
+      },
+      timeout: 6000,
+    });
+    let data = response.data;
+    if (typeof data === "string") {
+      try {
+        data = JSON.parse(data);
+      } catch (e) {
+        console.log(`Grizzly getPrices (country=${country}, service=${code}) non-JSON reply:`, data);
+        data = null;
+      }
+    }
+    const row = data && data[country] && data[country][code];
+    const usd = row ? Number(row.cost) : NaN;
+    const count = row ? Number(row.count) : NaN;
+    if (Number.isFinite(usd) && usd > 0) {
+      value = { usd, count: Number.isFinite(count) ? count : null };
+    }
+  } catch (e) {
+    console.log(`Grizzly getPrices (country=${country}, service=${code}) failed:`, e.message);
+  }
+
+  grizzlyPriceCache.set(key, { value, at: Date.now() });
+  return value;
+}
+
+// ---- PROVIDER-SCOPED COUNTRIES ----
 const getProviderCountries = async (req, res) => {
   const { provider } = req.params;
   try {
@@ -139,7 +190,7 @@ const getProviderCountries = async (req, res) => {
   }
 };
 
-// ── PROVIDER-SCOPED PRODUCTS/SERVICES ─────────
+// ---- PROVIDER-SCOPED PRODUCTS/SERVICES ----
 const getProviderProducts = async (req, res) => {
   const { provider, country } = req.params;
   try {
@@ -172,22 +223,41 @@ const getProviderProducts = async (req, res) => {
     }
 
     if (provider === "grizzly") {
+      const slugs = Object.keys(GRIZZLY_SERVICES).filter((slug) => notLocked(slug));
+      const live = await Promise.all(
+        slugs.map((slug) => getGrizzlyLivePrice(country, GRIZZLY_SERVICES[slug]))
+      );
       const cached = await PriceCache.find({ provider: "grizzly", country }).lean();
       const cacheMap = Object.fromEntries(cached.map((c) => [c.service, c.priceNgn]));
-      const list = Object.keys(GRIZZLY_SERVICES)
-        .filter((slug) => notLocked(slug))
-        .map((slug) => {
-          const range = getEstimateRange(slug);
-          const cachedPrice = cacheMap[slug] ?? null;
-          return {
+
+      const list = [];
+      slugs.forEach((slug, i) => {
+        const l = live[i];
+
+        // Real price from Grizzly: show it (and hide it if out of stock).
+        if (l) {
+          if (l.count !== null && l.count <= 0) return;
+          list.push({
             value: slug,
             label: slug,
-            price: cachedPrice,
-            estimateMin: cachedPrice == null ? range.min : null,
-            estimateMax: cachedPrice == null ? range.max : null,
-            qty: 1,
-          };
+            price: Math.ceil(l.usd * usdToNgn * MARKUP),
+            qty: l.count ?? 1,
+          });
+          return;
+        }
+
+        // Grizzly gave no price: fall back to the last known price or an estimate.
+        const range = getEstimateRange(slug);
+        const cachedPrice = cacheMap[slug] ?? null;
+        list.push({
+          value: slug,
+          label: slug,
+          price: cachedPrice,
+          estimateMin: cachedPrice == null ? range.min : null,
+          estimateMax: cachedPrice == null ? range.max : null,
+          qty: 1,
         });
+      });
       return res.status(200).json(list);
     }
 
@@ -256,7 +326,7 @@ const getProviderProducts = async (req, res) => {
   }
 };
 
-// ── BUY NUMBER ─────────────────────────────────
+// ---- BUY NUMBER ----
 const buySMS = async (req, res) => {
   try {
     const { country, service, provider } = req.body;
@@ -335,16 +405,39 @@ const buySMS = async (req, res) => {
     if (provider === "grizzly") {
       const code = GRIZZLY_SERVICES[service.toLowerCase()] || service;
 
+      // 1) Ask Grizzly for the real price BEFORE buying (never from the cache here).
+      const live = await getGrizzlyLivePrice(country, code, true);
+      let expectedCost = null;
+      if (live) {
+        if (live.count !== null && live.count <= 0) {
+          return res.status(400).json({
+            message: "Provider 3 has no numbers available right now for this selection.",
+          });
+        }
+        expectedCost = Math.ceil(live.usd * usdToNgn * MARKUP);
+      } else {
+        const cachedRow = await PriceCache.findOne({ provider: "grizzly", country, service }).lean();
+        if (cachedRow) expectedCost = cachedRow.priceNgn;
+      }
+
+      // 2) Check the wallet BEFORE paying Grizzly.
+      if (expectedCost != null && user.balance < expectedCost) {
+        return res.status(400).json({ message: "Insufficient balance" });
+      }
+
+      // 3) Only when Grizzly gave no price, fall back to measuring the balance change.
       let balanceBefore = null;
-      try {
-        const balResp = await axios.get(GRIZZLY_API, {
-          params: { api_key: process.env.GRIZZLY_API_KEY, action: "getBalance" },
-          timeout: 5000,
-        });
-        const match = String(balResp.data).match(/ACCESS_BALANCE:([\d.]+)/);
-        balanceBefore = match ? Number(match[1]) : null;
-      } catch (e) {
-        console.log("Grizzly getBalance (before) failed:", e.message);
+      if (!live) {
+        try {
+          const balResp = await axios.get(GRIZZLY_API, {
+            params: { api_key: process.env.GRIZZLY_API_KEY, action: "getBalance" },
+            timeout: 5000,
+          });
+          const match = String(balResp.data).match(/ACCESS_BALANCE:([\d.]+)/);
+          balanceBefore = match ? Number(match[1]) : null;
+        } catch (e) {
+          console.log("Grizzly getBalance (before) failed:", e.message);
+        }
       }
 
       const response = await axios.get(GRIZZLY_API, {
@@ -364,8 +457,8 @@ const buySMS = async (req, res) => {
         });
       }
 
-      let grizzlyUsdCost = null;
-      if (balanceBefore != null) {
+      let grizzlyUsdCost = live ? live.usd : null;
+      if (grizzlyUsdCost == null && balanceBefore != null) {
         try {
           const balResp2 = await axios.get(GRIZZLY_API, {
             params: { api_key: process.env.GRIZZLY_API_KEY, action: "getBalance" },
@@ -414,7 +507,7 @@ const buySMS = async (req, res) => {
     user.balance -= smsCost;
     await user.save();
 
-    // Save as PENDING — only becomes successful when OTP is received
+    // Save as PENDING - only becomes successful when OTP is received
     await Transaction.create({
       user: user._id,
       type: "sms_purchase",
@@ -439,7 +532,7 @@ const buySMS = async (req, res) => {
   }
 };
 
-// ── CHECK SMS ──────────────────────────────────
+// ---- CHECK SMS ----
 const checkSMS = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -497,7 +590,7 @@ const checkSMS = async (req, res) => {
   }
 };
 
-// ── CANCEL ORDER ───────────────────────────────
+// ---- CANCEL ORDER ----
 const cancelOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -557,7 +650,7 @@ const cancelOrder = async (req, res) => {
   }
 };
 
-// ── MARK OLD PENDING AS NOT SUCCESSFUL ────────
+// ---- MARK OLD PENDING AS NOT SUCCESSFUL ----
 const markExpiredOrders = async (req, res) => {
   try {
     const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);

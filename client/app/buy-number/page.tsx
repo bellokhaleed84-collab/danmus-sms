@@ -21,10 +21,15 @@ const PROVIDER_LABELS: Record<ProviderKey, string> = {
   grizzly: "Provider 3",
 };
 
+function SelectSkeleton() {
+  return <div className="w-full h-14 rounded-2xl bg-gray-500/20 animate-pulse" />;
+}
+
 export default function BuyNumberPage() {
   const [provider, setProvider] = useState<ProviderKey | null>(null);
   const [countries, setCountries] = useState<Option[]>([]);
   const [country, setCountry] = useState("");
+  const [countrySearch, setCountrySearch] = useState("");
   const [services, setServices] = useState<Option[]>([]);
   const [service, setService] = useState("");
   const [price, setPrice] = useState<number | null>(null);
@@ -58,6 +63,7 @@ export default function BuyNumberPage() {
   // provider's own country list.
   useEffect(() => {
     setCountry("");
+    setCountrySearch("");
     setService("");
     setPrice(null);
     setServices([]);
@@ -100,6 +106,16 @@ export default function BuyNumberPage() {
     const found = services.find((s) => s.value === service);
     setPrice(found?.price ?? null);
   }, [service, services]);
+
+  // Country search: filter by name as the person types. The chosen country
+  // always stays in the list so the dropdown never shows a blank choice.
+  const query = countrySearch.trim().toLowerCase();
+  const matches = query
+    ? countries.filter((c) => String(c.label).toLowerCase().includes(query))
+    : countries;
+  const chosen = country ? countries.find((c) => String(c.value) === country) : undefined;
+  const visibleCountries =
+    chosen && !matches.some((c) => String(c.value) === country) ? [chosen, ...matches] : matches;
 
   async function handleBuyNumber() {
     if (!provider || !country || !service) {
@@ -178,7 +194,7 @@ export default function BuyNumberPage() {
 
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-[32px] p-6 md:p-10 shadow-2xl text-white mb-10">
           <p className="text-lg opacity-80">Wallet Balance</p>
-          <h2 className="text-2xl md:text-6xl font-bold mt-4">₦{Number(balance).toLocaleString()}</h2>
+          <h2 className="text-2xl md:text-6xl font-bold mt-4">{"\u20A6"}{Number(balance).toLocaleString()}</h2>
           <div className="mt-8">
             <Link href="/add-funds">
               <button className="bg-white text-black hover:bg-gray-200 px-4 md:px-6 py-3 rounded-2xl font-semibold transition">
@@ -195,7 +211,7 @@ export default function BuyNumberPage() {
               <p><span className="text-gray-400">Phone Number:</span> <span className="font-bold text-blue-400">{order.phone}</span></p>
               <p><span className="text-gray-400">Service:</span> {order.service}</p>
               <p><span className="text-gray-400">Country:</span> {order.country}</p>
-              <p><span className="text-gray-400">Price:</span> ₦{order.price?.toLocaleString()}</p>
+              <p><span className="text-gray-400">Price:</span> {"\u20A6"}{order.price?.toLocaleString()}</p>
             </div>
 
             {sms?.sms && sms.sms.length > 0 ? (
@@ -253,28 +269,50 @@ export default function BuyNumberPage() {
               </div>
             </div>
 
-            {/* STEP 2: Country (scoped to chosen provider) */}
+            {/* STEP 2: Country (scoped to chosen provider) with search */}
             {provider && (
               <div className="mt-8">
-                <label htmlFor="country" className="block mb-3 text-lg font-semibold">
+                <label htmlFor="country-search" className="block mb-3 text-lg font-semibold">
                   Select Country
                 </label>
-                <select
-                  id="country"
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  disabled={loadingCountries}
-                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500 disabled:opacity-50"
-                >
-                  <option value="">{loadingCountries ? "Loading..." : "Choose country"}</option>
-                  {countries.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                {!loadingCountries && countries.length === 0 && (
-                  <p className="text-sm text-gray-400 mt-2">No countries available for this provider right now.</p>
+                {loadingCountries ? (
+                  <div className="space-y-3">
+                    <SelectSkeleton />
+                    <SelectSkeleton />
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      id="country-search"
+                      type="text"
+                      value={countrySearch}
+                      onChange={(e) => setCountrySearch(e.target.value)}
+                      placeholder="Search country..."
+                      autoComplete="off"
+                      className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 mb-3 outline-none focus:border-blue-500"
+                    />
+                    <select
+                      id="country"
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 outline-none focus:border-blue-500"
+                    >
+                      <option value="">
+                        {query ? `Choose country (${matches.length} found)` : "Choose country"}
+                      </option>
+                      {visibleCountries.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                    {countries.length === 0 && (
+                      <p className="text-sm text-gray-400 mt-2">No countries available for this provider right now.</p>
+                    )}
+                    {countries.length > 0 && query && matches.length === 0 && (
+                      <p className="text-sm text-gray-400 mt-2">No country matches your search.</p>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -285,23 +323,28 @@ export default function BuyNumberPage() {
                 <label htmlFor="service" className="block mb-3 text-lg font-semibold">
                   Select Service
                 </label>
-                <select
-                  id="service"
-                  value={service}
-                  onChange={(e) => setService(e.target.value)}
-                  disabled={loadingServices}
-                  className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-3 md:py-4 outline-none focus:border-blue-500 disabled:opacity-50"
-                >
-                  <option value="">{loadingServices ? "Loading..." : "Choose service"}</option>
-                  {services.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                      {s.price != null ? ` — ₦${s.price.toLocaleString()}` : " — price at checkout"}
-                    </option>
-                  ))}
-                </select>
-                {!loadingServices && services.length === 0 && (
-                  <p className="text-sm text-gray-400 mt-2">No services available for this country right now.</p>
+                {loadingServices ? (
+                  <SelectSkeleton />
+                ) : (
+                  <>
+                    <select
+                      id="service"
+                      value={service}
+                      onChange={(e) => setService(e.target.value)}
+                      className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 outline-none focus:border-blue-500"
+                    >
+                      <option value="">Choose service</option>
+                      {services.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                          {s.price != null ? ` \u2014 \u20A6${s.price.toLocaleString()}` : " \u2014 price at checkout"}
+                        </option>
+                      ))}
+                    </select>
+                    {services.length === 0 && (
+                      <p className="text-sm text-gray-400 mt-2">No services available for this country right now.</p>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -313,7 +356,7 @@ export default function BuyNumberPage() {
                   <p className="text-gray-400 mt-2">Price may vary based on availability</p>
                 </div>
                 <h2 className="text-2xl md:text-5xl font-bold text-blue-500">
-                  {!service ? "Select options" : price != null ? `₦${price.toLocaleString()}` : "Confirmed at checkout"}
+                  {!service ? "Select options" : price != null ? `\u20A6${price.toLocaleString()}` : "Confirmed at checkout"}
                 </h2>
               </div>
             </div>
@@ -330,17 +373,17 @@ export default function BuyNumberPage() {
 
         <div className="grid md:grid-cols-3 gap-6 mt-10">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
-            <div className="text-5xl mb-5">⚡</div>
+            <div className="text-5xl mb-5">{"\u26A1"}</div>
             <h3 className="text-2xl font-bold">Instant Delivery</h3>
             <p className="text-gray-400 mt-3">Receive numbers immediately after purchase</p>
           </div>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
-            <div className="text-5xl mb-5">🌍</div>
+            <div className="text-5xl mb-5">{"\uD83C\uDF0D"}</div>
             <h3 className="text-2xl font-bold">Global Countries</h3>
             <p className="text-gray-400 mt-3">Access numbers from multiple countries</p>
           </div>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl">
-            <div className="text-5xl mb-5">🔒</div>
+            <div className="text-5xl mb-5">{"\uD83D\uDD12"}</div>
             <h3 className="text-2xl font-bold">Secure Platform</h3>
             <p className="text-gray-400 mt-3">Safe and reliable OTP services</p>
           </div>

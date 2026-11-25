@@ -12,20 +12,27 @@ function Verify() {
 
   useEffect(() => {
     const ref =
+      params.get("paymentReference") ||
       params.get("reference") ||
       params.get("transaction_ref") ||
       params.get("trxref") ||
+      sessionStorage.getItem("deposit_ref") ||
       sessionStorage.getItem("squad_ref");
     if (!ref) {
       setMsg("No payment reference found.");
       setDone(true);
       return;
     }
+
+    // Monnify references start with DMN-, Squad references with DSQ-.
+    const base = ref.startsWith("DMN-") ? "/monnify/verify/" : "/squad/verify/";
+
     let tries = 0;
     const run = async () => {
       try {
-        const { data } = await API.get(`/squad/verify/${encodeURIComponent(ref)}`);
+        const { data } = await API.get(`${base}${encodeURIComponent(ref)}`);
         if (data.state === "success") {
+          sessionStorage.removeItem("deposit_ref");
           sessionStorage.removeItem("squad_ref");
           setMsg(`Payment confirmed. New balance: \u20A6${Number(data.balance).toLocaleString()}`);
           return setDone(true);

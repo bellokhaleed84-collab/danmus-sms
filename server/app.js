@@ -17,6 +17,9 @@ const squadRoutes = require("./routes/squadRoutes"); // SQUAD (edit 1)
 const { webhook: squadWebhook } = require("./controllers/squadController"); // SQUAD (edit 1)
 const numberRoutes = require("./routes/numberRoutes"); // NUMBERS
 const { webhook: numberWebhook } = require("./controllers/numberController"); // NUMBERS
+const depositRoutes = require("./routes/depositRoutes"); // DEPOSIT
+const monnifyRoutes = require("./routes/monnifyRoutes"); // MONNIFY
+const { webhook: monnifyWebhook } = require("./controllers/monnifyController"); // MONNIFY
 const { generalLimiter } = require("./middleware/rateLimiter");
 
 const app = express();
@@ -55,6 +58,13 @@ app.post(
   "/api/squad/webhook",
   express.raw({ type: "*/*", limit: "1mb" }),
   squadWebhook
+);
+
+// MONNIFY: webhook also needs the RAW body (HMAC signature)
+app.post(
+  "/api/monnify/webhook",
+  express.raw({ type: "*/*", limit: "1mb" }),
+  monnifyWebhook
 );
 
 // NUMBERS: Telnyx webhook also needs the RAW body (Ed25519 signature)
@@ -96,5 +106,7 @@ app.use("/api/payment-settings", paymentSettingsRoutes);
 app.use("/api/store", storeRoutes); // STORE
 app.use("/api/squad", squadRoutes); // SQUAD (edit 3)
 app.use("/api/numbers", numberRoutes); // NUMBERS
+app.use("/api/deposit", depositRoutes); // DEPOSIT
+app.use("/api/monnify", monnifyRoutes); // MONNIFY
 
 module.exports = app;

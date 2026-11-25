@@ -20,8 +20,9 @@ export default function FundPage() {
     if (!localStorage.getItem("token")) return router.push("/login");
     setLoading(true);
     try {
-      const { data } = await API.post("/squad/initialize", { amount: Number(amount) });
-      sessionStorage.setItem("squad_ref", data.reference);
+      // The backend uses whichever provider the admin has switched on.
+      const { data } = await API.post("/deposit/initialize", { amount: Number(amount) });
+      sessionStorage.setItem("deposit_ref", data.reference);
       window.location.href = data.checkoutUrl;
     } catch (err: any) {
       setError(err?.response?.data?.message || "Could not start payment");
@@ -54,13 +55,13 @@ export default function FundPage() {
           className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 shadow-xl space-y-6"
         >
           <div>
-            <label className="block text-gray-400 mb-2">Amount (₦)</label>
+            <label className="block text-gray-400 mb-2">Amount (&#8358;)</label>
             <input
               type="number"
               min={100}
               max={500000}
               step={1}
-              placeholder="Minimum ₦100"
+              placeholder="Minimum &#8358;100"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="w-full bg-[var(--input)] border border-[var(--border)] rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition"
@@ -76,7 +77,7 @@ export default function FundPage() {
                 onClick={() => setAmount(String(q))}
                 className="bg-[var(--input)] border border-[var(--border)] hover:border-blue-500 px-4 py-2 rounded-2xl text-sm transition"
               >
-                ₦{q.toLocaleString()}
+                &#8358;{q.toLocaleString()}
               </button>
             ))}
           </div>
@@ -87,7 +88,7 @@ export default function FundPage() {
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-2xl py-4 font-semibold transition shadow-xl"
           >
-            {loading ? "Redirecting to Squad…" : "Pay securely with Squad"}
+            {loading ? "Redirecting to payment\u2026" : "Pay securely"}
           </button>
         </form>
       </div>

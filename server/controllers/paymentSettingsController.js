@@ -1,10 +1,13 @@
 const PaymentSettings = require("../models/PaymentSettings");
 
 // A provider can only be selected if its keys exist on the server.
-// IMPORTANT: change these env var names if yours are different on Render.
 const PROVIDERS = [
-  { key: "paystack", label: "Paystack", envKeys: ["PAYSTACK_SECRET_KEY"] },
   { key: "squad", label: "Squad", envKeys: ["SQUAD_SECRET_KEY"] },
+  {
+    key: "monnify",
+    label: "Monnify",
+    envKeys: ["MONNIFY_API_KEY", "MONNIFY_SECRET_KEY", "MONNIFY_CONTRACT_CODE"],
+  },
 ];
 
 const isConfigured = (p) => p.envKeys.every((k) => !!process.env[k]);

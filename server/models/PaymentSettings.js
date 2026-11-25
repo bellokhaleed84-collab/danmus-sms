@@ -5,8 +5,8 @@ const paymentSettingsSchema = new mongoose.Schema(
     key: { type: String, default: "global", unique: true },
     activeProvider: {
       type: String,
-      enum: ["paystack", "squad"],
-      default: "paystack",
+      enum: ["paystack", "squad", "monnify"],
+      default: "squad",
     },
     depositsEnabled: { type: Boolean, default: true },
     maintenanceMessage: {
